@@ -1,8 +1,8 @@
 {
   "name": "maxwellgenerative-creativetools-storybuilder-t1",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "private": true,
-  "homepage": "https://shannonleonard.github.io/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1",
+  "homepage": "https://shannonleonard.github.io/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.0",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
