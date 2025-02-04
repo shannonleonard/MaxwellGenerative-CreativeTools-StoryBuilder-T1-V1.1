@@ -270,8 +270,10 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   }, [textControls]);
 
   // Slide navigation.
-  const handleNext = () => setCurrentSlide((prev) => (prev + 1) % totalSlides);
-  const handlePrevious = () => setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  const handleNext = () =>
+    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  const handlePrevious = () =>
+    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
 
   // Image upload handlers.
   const handleImageUpload = (e) => {
