@@ -129,11 +129,11 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Slide text data.
   const slidesData = [
     "AI research in minutes without manual searching.",
-"Deep Research accelerates creative inspiration and analysis.",
-"New possibilities for storytelling, design, and music research.",
-"How AI-driven research might reshape creative processes.",
-"Deep Research launching soon for broader accessibility.",
-"Staying updated on AI’s impact on creative workflows."
+    "Deep Research accelerates creative inspiration and analysis.",
+    "New possibilities for storytelling, design, and music research.",
+    "How AI-driven research might reshape creative processes.",
+    "Deep Research launching soon for broader accessibility.",
+    "Staying updated on AI's impact on creative workflows."
   ];
   
   const totalSlides = slidesData.length;
