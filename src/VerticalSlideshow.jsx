@@ -128,21 +128,12 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Slide text data.
   const slidesData = [
-    "When critics dismiss AI as overhyped, innovation quietly unfolds.",
-    "DeepSeek's R1 emerges from a legacy of breakthroughs, challenging old assumptions.",
-    "Accessibility in AI is growing—powerful reasoning tools become available for all.",
-    "Rather than a threat, this evolution paves the way for smarter, more sustainable systems.",
-    "Building on decades of progress, new models enhance efficiency and reduce environmental costs.",
-    "Open-source advancements are transforming the AI landscape, democratizing technology.",
-    "As large companies adapt, the ripple effect of accessible AI reshapes creative industries.",
-    "Innovation now means combining cutting-edge tech with sustainable practices.",
-    "The future is collaborative, where technology empowers creativity and inclusivity.",
-    "Every breakthrough refines our tools and redefines what's possible.",
-    "In this new era, smarter models fuel a more efficient and eco-conscious AI evolution.",
-    "Creativity and technology merge to create powerful tools for the modern world.",
-    "The shift is clear: accessible AI opens new avenues for creative problem solving.",
-    "Forward-thinking professionals are already harnessing these advances to stay ahead.",
-    "Discover more insights and strategies at Creative Workflow Lab."
+    "AI research in minutes without manual searching.",
+"Deep Research accelerates creative inspiration and analysis.",
+"New possibilities for storytelling, design, and music research.",
+"How AI-driven research might reshape creative processes.",
+"Deep Research launching soon for broader accessibility.",
+"Staying updated on AI’s impact on creative workflows."
   ];
   
   const totalSlides = slidesData.length;
