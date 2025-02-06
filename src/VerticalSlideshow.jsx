@@ -128,13 +128,18 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Slide text data.
   const slidesData = [
-    "AI research in minutes without manual searching.",
-    "Deep Research accelerates creative inspiration and analysis.",
-    "New possibilities for storytelling, design, and music research.",
-    "How AI-driven research might reshape creative processes.",
-    "Deep Research launching soon for broader accessibility.",
-    "Staying updated on AI's impact on creative workflows."
-  ];
+    "AI uses energy, but let’s look at the full picture.",
+    "Transparency in AI energy and water usage is crucial.",
+    "AI’s water and energy usage is mostly in model training, not individual prompts.",
+    "Data center location and power sources change AI’s environmental impact.",
+    "Every action has an environmental cost; AI should be made more efficient, not abandoned.",
+    "AI companies are working on reducing energy consumption.",
+    "Local AI models reduce reliance on cloud servers and cut energy use.",
+    "AI can help solve environmental challenges, not just contribute to them.",
+    "AI fear narratives shouldn’t distract from real sustainability efforts.",
+    "AI should be made more efficient, not scapegoated as a major environmental culprit.",
+    "Explore AI’s role in creativity at creativeworkflowlab.com"
+  ];  
   
   const totalSlides = slidesData.length;
   
