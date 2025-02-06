@@ -401,7 +401,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         <OrbsContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
         <motion.div
           className="absolute z-20 text-white font-bold text-lg cursor-pointer"
-          style={{ left: '31.8%', top: '4rem' }}
+          style={{ left: '31.8%', top: '5rem' }}
           initial={{ opacity: 1 }}
           animate={{ opacity: [0.8, 1, 0.8], transition: { duration: 3, repeat: Infinity, ease: 'easeInOut' } }}
           whileHover={{ rotate: [0, -3, 3, 0], scale: 1.15, filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.9))' }}
@@ -477,12 +477,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
               />
             ))}
           </AnimatePresence>
-        </div>
-
-        <div className="absolute bottom-0 left-0 w-full h-[300px] bg-transparent flex items-center justify-center z-20">
-          <div className="relative w-11/12 h-5 bg-blue-800 rounded-md overflow-hidden">
-            <motion.div className="absolute left-0 top-0 h-5 bg-blue-500" animate={{ width: progressWidth }} transition={{ duration: 4.3, ease: 'easeInOut' }} />
-          </div>
         </div>
       </div>
 
