@@ -137,7 +137,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     "Local AI models reduce reliance on cloud servers and cut energy use.",
     "AI can help solve environmental challenges, not just contribute to them.",
     "AI fear narratives shouldn’t distract from real sustainability efforts.",
-    "AI should be made more efficient, not scapegoated as a major environmental culprit.",
+    "AI should be made more efficient.",
     "Explore AI’s role in creativity at creativeworkflowlab.com"
   ];  
   
