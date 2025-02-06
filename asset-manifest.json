@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/css/main.4ba1b62c.css",
-    "main.js": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.38d46173.js",
+    "main.js": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.24d83047.js",
     "index.html": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/index.html",
     "main.4ba1b62c.css.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/css/main.4ba1b62c.css.map",
-    "main.38d46173.js.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.38d46173.js.map"
+    "main.24d83047.js.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.24d83047.js.map"
   },
   "entrypoints": [
     "static/css/main.4ba1b62c.css",
-    "static/js/main.38d46173.js"
+    "static/js/main.24d83047.js"
   ]
 }
