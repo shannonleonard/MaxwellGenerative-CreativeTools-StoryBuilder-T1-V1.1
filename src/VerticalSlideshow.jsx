@@ -128,17 +128,12 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Slide text data.
   const slidesData = [
-    "AI uses energy, but let’s look at the full picture.",
-    "Transparency in AI energy and water usage is crucial.",
-    "AI’s water and energy usage is mostly in model training, not individual prompts.",
-    "Data center location and power sources change AI’s environmental impact.",
-    "Every action has an environmental cost; AI should be made more efficient, not abandoned.",
-    "AI companies are working on reducing energy consumption.",
-    "Local AI models reduce reliance on cloud servers and cut energy use.",
-    "AI can help solve environmental challenges, not just contribute to them.",
-    "AI fear narratives shouldn’t distract from real sustainability efforts.",
-    "AI should be made more efficient.",
-    "Explore AI’s role in creativity at creativeworkflowlab.com"
+    "This just made high-end AI way more affordable for everyday users.",
+    "Turns out, even AI fans won’t pay *any* price.",
+    "For a few bucks, you can test if this AI actually *feels* smarter.",
+    "Like it or not, AI is already part of daily life for millions.",
+    "Is this really an upgrade, or does GPT-4o still win?",
+    "Time to see what this means for real creative work."
   ];  
   
   const totalSlides = slidesData.length;
