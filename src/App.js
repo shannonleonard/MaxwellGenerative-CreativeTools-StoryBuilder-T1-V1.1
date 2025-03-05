@@ -3,7 +3,7 @@ import VerticalSlideshow from './VerticalSlideshow';
 
 function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const totalSlides = 15;
+  const totalSlides = slidesData.length;
 
   const handleNext = () => setCurrentSlide((prev) => (prev + 1) % totalSlides);
   const handlePrevious = () => setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
