@@ -132,7 +132,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     "Turns out, even AI fans won’t pay *any* price.",
     "For a few bucks, you can test if this AI actually *feels* smarter.",
     "Like it or not, AI is already part of daily life for millions.",
-    "Is this really an upgrade, or does GPT-4o still win?",
+    "Is this really an upgrade, or does Claude 3.7 win?",
     "Time to see what this means for real creative work."
   ];  
   
