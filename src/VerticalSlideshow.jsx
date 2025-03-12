@@ -19,33 +19,8 @@ const orbColorThemes = [
 
 // Define the components first before using them
 function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 90 }) {
-  // Use fewer orbs for better performance
-  const orbCount = 6; // Reduced from 12
-  const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
+  const orbs = useSlideOrbs(slideIndex, 6, orbSpeed, themeOverride); // Use 6 orbs instead of 12
   const effectiveBlur = Math.max(20, blurAmount);
-  
-  // Generate orbs with memoization
-  const orbs = useMemo(() => {
-    const newOrbs = [];
-    // More direct relationship between speed slider and actual speed
-    const effectiveSpeed = orbSpeed * 2; 
-    
-    for (let i = 0; i < orbCount; i++) {
-      const baseDuration = 20 + i * 3;
-      // Direct relationship between slider and duration
-      const duration = baseDuration / effectiveSpeed;
-      
-      newOrbs.push({
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        theme: theme,
-        width: 250 + Math.random() * 300,
-        height: 250 + Math.random() * 300,
-        duration: duration
-      });
-    }
-    return newOrbs;
-  }, [orbCount, orbSpeed, theme]);
   
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
@@ -484,41 +459,30 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Cleanup animation resources on unmount and when changing slides
   // Single cleanupAnimations effect to prevent animation leaks
   useEffect(() => {
-    // Create references to animation-related resources
-    const refs = {
-      textControls,
-      baseX,
-      baseY,
-      raf: rafId.current,
-      lastTime: lastTimeRef.current,
-      keysState: keysPressed.current
-    };
-    
     // Reset all animations when slide changes
-    textControls.set({
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: "drop-shadow(0 0 25px rgba(255,255,255,0.5))"
-    });
+    if (textControls) {
+      textControls.set({
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        filter: "drop-shadow(0 0 25px rgba(255,255,255,0.5))"
+      });
+    }
     
     // Return cleanup function
     return () => {
       // Cancel any outstanding animation frames
-      if (refs.raf) {
-        cancelAnimationFrame(refs.raf);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
       }
       
       // Stop any active animations
-      if (refs.textControls) {
-        refs.textControls.stop();
+      if (textControls) {
+        textControls.stop();
       }
-      
-      // Reset animation states
-      refs.lastTime = null;
-      refs.keysState = { w: false, a: false, s: false, d: false };
     };
-  }, [currentSlide, textControls, baseX, baseY]);
+  }, [currentSlide, textControls]);
 
   // Reset functionality
   const resetTextPosition = useCallback(() => {
@@ -610,6 +574,63 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       setCurrentSlide(0);
     }
   };
+
+  // Define CSS variables for theme colors at the very beginning to avoid hoisting issues
+  useEffect(() => {
+    // Set the initial hue-shift variable
+    document.documentElement.style.setProperty('--hue-shift', `${globalHueShift}deg`);
+  }, [globalHueShift]);
+
+  // Allow text movement with WASD keys
+  useEffect(() => {
+    const movementSpeed = 0.5;
+    const handleKeyDown = (e) => {
+      const key = e.key.toLowerCase();
+      if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = true;
+    };
+
+    const handleKeyUp = (e) => {
+      const key = e.key.toLowerCase();
+      if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = false;
+    };
+
+    function animate(time) {
+      if (!lastTimeRef.current) lastTimeRef.current = time;
+      const delta = time - lastTimeRef.current;
+      lastTimeRef.current = time;
+      const movement = movementSpeed * delta;
+
+      if (keysPressed.current.w) baseY.set(baseY.get() - movement);
+      if (keysPressed.current.s) baseY.set(baseY.get() + movement);
+      if (keysPressed.current.a) baseX.set(baseX.get() - movement);
+      if (keysPressed.current.d) baseX.set(baseX.get() + movement);
+
+      rafId.current = requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    rafId.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
+      lastTimeRef.current = null;
+    };
+  }, [baseX, baseY]);
+
+  // Add back the backslash key reset effect
+  useEffect(() => {
+    const handleResetKey = (e) => {
+      if (e.key === "\\") resetTextPosition();
+    };
+    window.addEventListener('keydown', handleResetKey);
+    return () => window.removeEventListener('keydown', handleResetKey);
+  }, [resetTextPosition]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
