@@ -126,8 +126,8 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
   // Make speed directly proportional to orbSpeed for more intuitive control
   const speed = Math.max(0.2, orbSpeed * 2); 
-  // Ensure wave blur is always visible but scales with slider
-  const effectiveBlur = Math.max(20, blurAmount);
+  // Always apply a strong blur to waves - minimum 30px
+  const effectiveBlur = Math.max(30, blurAmount);
   
   console.log('Waves theme:', themeOverride);
   
@@ -139,7 +139,7 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
       // Direct connection between speed slider and wave speed
       speed: (0.5 + i * 0.3) * speed,
       height: 15 + i * 10,
-      opacity: 0.6 - i * 0.1,  // Increased opacity for better visibility
+      opacity: 0.7 - i * 0.1,  // Increased opacity for better visibility
       blur: effectiveBlur
     }));
   }, [speed, effectiveBlur]);
@@ -190,6 +190,7 @@ function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, th
         className={`absolute w-[200%] h-full bg-gradient-to-r ${theme}`}
         style={{ 
           clipPath: `polygon(${wavePoints})`, 
+          // Ensure blur is always applied and prominent
           filter: `blur(${blurAmount}px) hue-rotate(var(--hue-shift))`,
           zIndex: 5
         }}
@@ -709,12 +710,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Store randomly generated slide colors
   const [slideColorMap, setSlideColorMap] = useState({});
 
-  // Function to generate a new random color that complements the theme
+  // Enhanced function to generate more varied complementary colors for slides
   const generateRandomSlideColor = useCallback((themeIndex, slideIndex) => {
     const theme = backgroundThemes[themeIndex];
     const baseColors = theme.slideColors;
     
-    // Generate a random color by modifying the base color from the theme
+    // Generate a color that's more distinctly different but still complementary
     const baseColor = baseColors[slideIndex % baseColors.length];
     
     // Convert hex to RGB
@@ -722,27 +723,27 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     const g = parseInt(baseColor.slice(3, 5), 16);
     const b = parseInt(baseColor.slice(5, 7), 16);
     
-    // Create variation while keeping it dark enough for white text
-    // Randomly shift hue while maintaining darkness
-    const hueShift = Math.floor(Math.random() * 60) - 30; // -30 to +30 degrees
-    const satShift = Math.random() * 0.2 - 0.1; // -10% to +10%
+    // Create more significant variation while maintaining darkness and theme relationship
+    // Increase hue shift range for more distinctive colors
+    const hueShift = Math.floor(Math.random() * (80) - 40); // -40 to +40 degrees
+    const satShift = Math.random() * 0.3 - 0.15; // -15% to +15%
     
     // Convert to HSL to manipulate
     let [h, s, l] = rgbToHsl(r, g, b);
     
-    // Shift hue
+    // Apply larger hue shift for more variety
     h = (h + hueShift + 360) % 360;
     
-    // Adjust saturation slightly, keeping it bounded
-    s = Math.max(0.2, Math.min(0.9, s + satShift));
+    // More dramatic saturation adjustment for variety
+    s = Math.max(0.3, Math.min(0.9, s + satShift));
     
-    // Keep lightness low for good contrast with white text
-    l = Math.max(0.1, Math.min(0.35, l + (Math.random() * 0.1 - 0.05)));
+    // Keep lightness low for good contrast with white text, but vary slightly
+    l = Math.max(0.12, Math.min(0.38, l + (Math.random() * 0.16 - 0.08)));
     
     // Convert back to RGB then hex
     const newColor = hslToHex(h, s, l);
     return newColor;
-  }, []);
+  }, [backgroundThemes]);
   
   // Function to convert RGB to HSL
   const rgbToHsl = (r, g, b) => {
@@ -922,23 +923,35 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     return shiftHue(slideColorMap[colorKey], globalHueShift);
   }, [selectedThemeIndex, globalHueShift, slideColorMap, generateRandomSlideColor]);
 
-  // Generate new random colors when theme changes
+  // Generate a new random color for EACH slide when changing themes
   useEffect(() => {
     // Clear the color map to force new colors when theme changes
     setSlideColorMap({});
     
-    // Update slide colors
+    // Generate new colors for ALL slides
     if (slidesData.length > 0) {
+      const newColorMap = {};
+      
+      // Pre-generate all colors
+      slidesData.forEach((_, index) => {
+        const colorKey = `${selectedThemeIndex}-${index}`;
+        newColorMap[colorKey] = generateRandomSlideColor(selectedThemeIndex, index);
+      });
+      
+      // Set all colors at once
+      setSlideColorMap(newColorMap);
+      
+      // Update all slides with their new colors
       setSlidesData(prevSlides => 
         prevSlides.map((slide, index) => ({
           ...slide,
           transparentBackground: true,
           useCustomBackground: false,
-          backgroundColor: getSlideColor(index)
+          backgroundColor: newColorMap[`${selectedThemeIndex}-${index}`]
         }))
       );
     }
-  }, [selectedThemeIndex, getSlideColor, slidesData.length]);
+  }, [selectedThemeIndex, generateRandomSlideColor, slidesData.length]);
 
   // Generate a new random color when changing slides
   useEffect(() => {
