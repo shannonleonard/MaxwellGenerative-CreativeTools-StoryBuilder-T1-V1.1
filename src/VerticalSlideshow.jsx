@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useAnimation } from 'framer-motion';
-import VersionInfo from './components/VersionInfo';
 import BackupManager from './components/BackupManager';
 import { createBackup } from './utils/version';
 
@@ -129,8 +128,17 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 // Edit Slides Modal Component
 // -----------------------------------------------------
 function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
-  const [editedSlides, setEditedSlides] = useState(slides.join('\n'));
-  const [textColor, setTextColor] = useState('#FFFFFF');
+  const [editedSlides, setEditedSlides] = useState(slides.map(slide => slide.text || slide).join('\n'));
+  const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
+  const [slideStyles, setSlideStyles] = useState(
+    slides.map(slide => ({
+      textColor: slide.textColor || '#FFFFFF',
+      gradientStart: slide.gradientStart || '#FFFFFF',
+      gradientEnd: slide.gradientEnd || '#FFFFFF',
+      useGradient: slide.useGradient || false,
+      fontWeight: slide.fontWeight || 'bold',
+    }))
+  );
   const textareaRef = useRef(null);
 
   // Focus the textarea when the modal opens
@@ -140,15 +148,80 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     }
   }, [isOpen]);
 
+  // Update slide styles when slides change
+  useEffect(() => {
+    const slideLines = editedSlides.split('\n').filter(line => line.trim().length > 0);
+    
+    // If we have more slides than styles, add default styles for new slides
+    if (slideLines.length > slideStyles.length) {
+      const newStyles = [...slideStyles];
+      for (let i = slideStyles.length; i < slideLines.length; i++) {
+        newStyles.push({
+          textColor: '#FFFFFF',
+          gradientStart: '#FFFFFF',
+          gradientEnd: '#FFFFFF',
+          useGradient: false,
+          fontWeight: 'bold',
+        });
+      }
+      setSlideStyles(newStyles);
+    }
+    
+    // Update selected slide index if it's out of bounds
+    if (selectedSlideIndex >= slideLines.length && slideLines.length > 0) {
+      setSelectedSlideIndex(slideLines.length - 1);
+    }
+  }, [editedSlides, slideStyles.length, selectedSlideIndex]);
+
   const handleSave = () => {
     // Split the text by newlines and filter out empty lines
-    const newSlides = editedSlides
+    const slideLines = editedSlides
       .split('\n')
       .map(slide => slide.trim())
       .filter(slide => slide.length > 0);
     
-    onSave(newSlides, textColor);
+    // Create slide objects with text and style properties
+    const newSlides = slideLines.map((text, index) => ({
+      text,
+      ...slideStyles[index < slideStyles.length ? index : slideStyles.length - 1]
+    }));
+    
+    onSave(newSlides);
     onClose();
+  };
+
+  const handleSlideSelect = (index) => {
+    setSelectedSlideIndex(index);
+  };
+
+  const handleStyleChange = (property, value) => {
+    const newStyles = [...slideStyles];
+    if (newStyles[selectedSlideIndex]) {
+      newStyles[selectedSlideIndex] = {
+        ...newStyles[selectedSlideIndex],
+        [property]: value
+      };
+      setSlideStyles(newStyles);
+    }
+  };
+
+  const handleToggleGradient = () => {
+    const newStyles = [...slideStyles];
+    if (newStyles[selectedSlideIndex]) {
+      newStyles[selectedSlideIndex] = {
+        ...newStyles[selectedSlideIndex],
+        useGradient: !newStyles[selectedSlideIndex].useGradient
+      };
+      setSlideStyles(newStyles);
+    }
+  };
+
+  const handleApplyToAll = () => {
+    if (slideStyles[selectedSlideIndex]) {
+      const currentStyle = slideStyles[selectedSlideIndex];
+      const newStyles = slideStyles.map(() => ({ ...currentStyle }));
+      setSlideStyles(newStyles);
+    }
   };
 
   // Prevent keyboard shortcuts from triggering while modal is open
@@ -183,35 +256,155 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
 
   if (!isOpen) return null;
 
+  const slideLines = editedSlides.split('\n').filter(line => line.trim().length > 0);
+  const currentStyle = slideStyles[selectedSlideIndex] || {
+    textColor: '#FFFFFF',
+    gradientStart: '#FFFFFF',
+    gradientEnd: '#FFFFFF',
+    useGradient: false,
+    fontWeight: 'bold',
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
         <h2 className="text-white text-2xl font-bold mb-4">Edit Slides</h2>
         
-        <div className="mb-4">
-          <label className="text-white block mb-2">Text Color:</label>
-          <div className="flex items-center gap-3">
-            <input 
-              type="color" 
-              value={textColor} 
-              onChange={(e) => setTextColor(e.target.value)} 
-              className="w-10 h-10 rounded cursor-pointer"
+        <div className="flex flex-col md:flex-row gap-6 mb-4 flex-1 overflow-hidden">
+          {/* Left side: Text editor */}
+          <div className="flex-1 overflow-hidden">
+            <label className="text-white block mb-2">
+              Enter each slide on a new line:
+            </label>
+            <textarea
+              ref={textareaRef}
+              value={editedSlides}
+              onChange={(e) => setEditedSlides(e.target.value)}
+              className="w-full h-[300px] p-3 bg-gray-700 text-white rounded resize-none"
+              style={{ overflowY: 'auto' }}
             />
-            <span className="text-white">{textColor}</span>
           </div>
-        </div>
-        
-        <div className="mb-4 flex-1 overflow-hidden">
-          <label className="text-white block mb-2">
-            Enter each slide on a new line:
-          </label>
-          <textarea
-            ref={textareaRef}
-            value={editedSlides}
-            onChange={(e) => setEditedSlides(e.target.value)}
-            className="w-full h-[300px] p-3 bg-gray-700 text-white rounded resize-none"
-            style={{ overflowY: 'auto' }}
-          />
+          
+          {/* Right side: Style editor */}
+          <div className="flex-1 overflow-hidden">
+            <div className="mb-4">
+              <label className="text-white block mb-2">Select slide to style:</label>
+              <div className="max-h-[100px] overflow-y-auto mb-4 bg-gray-700 rounded">
+                {slideLines.map((line, index) => (
+                  <div 
+                    key={index}
+                    className={`p-2 cursor-pointer hover:bg-gray-600 ${selectedSlideIndex === index ? 'bg-blue-900' : ''}`}
+                    onClick={() => handleSlideSelect(index)}
+                  >
+                    <span className="text-white truncate block">{line.substring(0, 30)}{line.length > 30 ? '...' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {slideLines.length > 0 && (
+              <>
+                <div className="mb-4">
+                  <label className="text-white block mb-2">Preview:</label>
+                  <div 
+                    className="p-4 rounded bg-gray-900 min-h-[80px] flex items-center justify-center"
+                  >
+                    <div 
+                      className={`text-xl ${currentStyle.fontWeight}`}
+                      style={
+                        currentStyle.useGradient 
+                          ? { 
+                              background: `linear-gradient(to right, ${currentStyle.gradientStart}, ${currentStyle.gradientEnd})`,
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text'
+                            } 
+                          : { color: currentStyle.textColor }
+                      }
+                    >
+                      {slideLines[selectedSlideIndex]}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <div className="flex items-center mb-2">
+                    <input 
+                      type="checkbox" 
+                      id="useGradient"
+                      checked={currentStyle.useGradient}
+                      onChange={handleToggleGradient}
+                      className="mr-2"
+                    />
+                    <label htmlFor="useGradient" className="text-white">Use Gradient</label>
+                  </div>
+                  
+                  {currentStyle.useGradient ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-white block mb-1">Gradient Start:</label>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={currentStyle.gradientStart} 
+                            onChange={(e) => handleStyleChange('gradientStart', e.target.value)} 
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <span className="text-white">{currentStyle.gradientStart}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-white block mb-1">Gradient End:</label>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={currentStyle.gradientEnd} 
+                            onChange={(e) => handleStyleChange('gradientEnd', e.target.value)} 
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <span className="text-white">{currentStyle.gradientEnd}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-white block mb-1">Text Color:</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          value={currentStyle.textColor} 
+                          onChange={(e) => handleStyleChange('textColor', e.target.value)} 
+                          className="w-10 h-10 rounded cursor-pointer"
+                        />
+                        <span className="text-white">{currentStyle.textColor}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mb-4">
+                  <label className="text-white block mb-1">Font Weight:</label>
+                  <select
+                    value={currentStyle.fontWeight}
+                    onChange={(e) => handleStyleChange('fontWeight', e.target.value)}
+                    className="w-full p-2 bg-gray-700 text-white rounded"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="bold">Bold</option>
+                    <option value="extrabold">Extra Bold</option>
+                    <option value="light">Light</option>
+                  </select>
+                </div>
+                
+                <button 
+                  onClick={handleApplyToAll} 
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 mb-4"
+                >
+                  Apply Style to All Slides
+                </button>
+              </>
+            )}
+          </div>
         </div>
         
         <div className="flex justify-end gap-3">
@@ -239,16 +432,37 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
 const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Slide text data.
   const [slidesData, setSlidesData] = useState([
-    "This just made high-end AI way more affordable for everyday users.",
-    "Turns out, even AI fans won't pay *any* price.",
-    "For a few bucks, you can test if this AI actually *feels* smarter.",
-    "Like it or not, AI is already part of daily life for millions.",
-    "Is this really an upgrade, or does Claude 3.7 win?",
-    "Time to see what this means for real creative work."
+    { 
+      text: "This just made high-end AI way more affordable for everyday users.",
+      textColor: "#FFFFFF",
+      useGradient: false
+    },
+    { 
+      text: "Turns out, even AI fans won't pay *any* price.",
+      textColor: "#FFFFFF",
+      useGradient: false
+    },
+    { 
+      text: "For a few bucks, you can test if this AI actually *feels* smarter.",
+      textColor: "#FFFFFF",
+      useGradient: false
+    },
+    { 
+      text: "Like it or not, AI is already part of daily life for millions.",
+      textColor: "#FFFFFF",
+      useGradient: false
+    },
+    { 
+      text: "Is this really an upgrade, or does Claude 3.7 win?",
+      textColor: "#FFFFFF",
+      useGradient: false
+    },
+    { 
+      text: "Time to see what this means for real creative work.",
+      textColor: "#FFFFFF",
+      useGradient: false
+    }
   ]);
-  
-  // Text color state
-  const [textColor, setTextColor] = useState('#FFFFFF');
   
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -453,9 +667,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   }, [slidesData]);
 
   // Handle saving edited slides
-  const handleSaveSlides = (newSlides, newTextColor) => {
+  const handleSaveSlides = (newSlides) => {
     setSlidesData(newSlides);
-    setTextColor(newTextColor);
     
     // If current slide is now out of bounds, reset to first slide
     if (currentSlide >= newSlides.length) {
@@ -468,10 +681,17 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   
   // Handle restoring slides from backup
   const handleRestoreBackup = (restoredSlides) => {
-    setSlidesData(restoredSlides);
+    // Convert simple string slides to objects if needed
+    const formattedSlides = restoredSlides.map(slide => 
+      typeof slide === 'string' 
+        ? { text: slide, textColor: "#FFFFFF", useGradient: false }
+        : slide
+    );
+    
+    setSlidesData(formattedSlides);
     
     // If current slide is now out of bounds, reset to first slide
-    if (currentSlide >= restoredSlides.length) {
+    if (currentSlide >= formattedSlides.length) {
       setCurrentSlide(0);
     }
   };
@@ -554,11 +774,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       >
         <OrbsContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
         
-        {/* Version info display */}
-        <div className="absolute top-2 right-2 z-50">
-          <VersionInfo />
-        </div>
-        
         <motion.div
           className="absolute z-20 text-white font-bold text-lg cursor-pointer"
           style={{ left: '31.8%', top: '5rem' }}
@@ -601,10 +816,20 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                   scale: { duration: 0.2, ease: "backInOut" },
                   filter: { duration: 0.6, times: [0, 0.3, 1], ease: "easeInOut" }
                 }}
-                className="text-white font-bold text-4xl leading-relaxed text-left max-w-2xl p-8"
+                className={`text-left max-w-2xl p-8 ${slidesData[currentSlide].fontWeight || 'font-bold'} text-4xl leading-relaxed`}
+                style={
+                  slidesData[currentSlide].useGradient 
+                    ? { 
+                        background: `linear-gradient(to right, ${slidesData[currentSlide].gradientStart || '#FFFFFF'}, ${slidesData[currentSlide].gradientEnd || '#FFFFFF'})`,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      } 
+                    : { color: slidesData[currentSlide].textColor || '#FFFFFF' }
+                }
                 whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.9))', scale: 1.05 }}
               >
-                {slidesData[currentSlide]}
+                {slidesData[currentSlide].text || slidesData[currentSlide]}
               </motion.div>
             </AnimatePresence>
           </motion.div>
