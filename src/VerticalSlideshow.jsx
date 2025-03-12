@@ -19,36 +19,36 @@ const orbColorThemes = [
 
 // Background animation styles
 const backgroundAnimations = [
-  { id: 'orbs', name: 'Floating Orbs', component: OrbsContainer },
-  { id: 'particles', name: 'Particles', component: ParticlesContainer },
-  { id: 'waves', name: 'Wave Effect', component: WavesContainer },
+  { id: 'orbs', name: 'Floating Orbs', component: MemoizedOrbsContainer },
+  { id: 'particles', name: 'Particles', component: MemoizedParticlesContainer },
+  { id: 'waves', name: 'Wave Effect', component: MemoizedWavesContainer },
   { id: 'none', name: 'None (Static)', component: null }
 ];
 
 // useSlideOrbs now accepts an orbSpeed value that controls animation speed.
-function useSlideOrbs(slideIndex, orbCount = 8, orbSpeed = 1) {
+function useSlideOrbs(slideIndex, orbCount = 8, orbSpeed = 1, themeOverride = null) {
   return useMemo(() => {
     const newOrbs = [];
     for (let i = 0; i < orbCount; i++) {
       const baseDuration = 15 + i * 3;
       // A higher orbSpeed means faster movement (shorter animation duration).
-      const duration = baseDuration / orbSpeed;
+      const duration = baseDuration / (orbSpeed * 1.5);
       newOrbs.push({
         x: Math.random() * 100,
         y: Math.random() * 100,
         z: Math.random() * 400 - 200,
-        theme: orbColorThemes[slideIndex % orbColorThemes.length],
+        theme: themeOverride || orbColorThemes[slideIndex % orbColorThemes.length],
         width: 300 + Math.random() * 200,
         height: 300 + Math.random() * 200,
         duration
       });
     }
     return newOrbs;
-  }, [slideIndex, orbCount, orbSpeed]);
+  }, [slideIndex, orbCount, orbSpeed, themeOverride]);
 }
 
-function OrbsContainer({ slideIndex, orbSpeed }) {
-  const orbs = useSlideOrbs(slideIndex, 8, orbSpeed);
+function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null }) {
+  const orbs = useSlideOrbs(slideIndex, 8, orbSpeed, themeOverride);
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -95,16 +95,19 @@ function OrbsContainer({ slideIndex, orbSpeed }) {
 }
 
 // Particles background animation
-function ParticlesContainer({ slideIndex, orbSpeed }) {
-  const theme = orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
+function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
+  const theme = themeOverride || 
+    orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
+  
   const particles = useMemo(() => {
-    const count = 30 + Math.floor(orbSpeed * 10);
-    return Array.from({ length: count }).map((_, i) => ({
+    // Limit max particles to prevent performance issues
+    const maxParticles = Math.min(60, 30 + Math.floor(orbSpeed * 15));
+    return Array.from({ length: maxParticles }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       size: 3 + Math.random() * 8,
-      duration: (3 + Math.random() * 7) / orbSpeed
+      duration: (3 + Math.random() * 7) / (orbSpeed * 1.5) // More significant speed effect
     }));
   }, [slideIndex, orbSpeed]);
 
@@ -113,8 +116,10 @@ function ParticlesContainer({ slideIndex, orbSpeed }) {
       {particles.map(particle => (
         <motion.div
           key={particle.id}
-          className={`absolute rounded-full bg-${theme}`}
           style={{
+            position: 'absolute',
+            borderRadius: '9999px',
+            backgroundColor: `var(--${theme})`,
             width: particle.size,
             height: particle.size,
             x: `${particle.x}%`,
@@ -138,21 +143,30 @@ function ParticlesContainer({ slideIndex, orbSpeed }) {
 }
 
 // Wave effect background
-function WavesContainer({ slideIndex, orbSpeed }) {
-  const theme = orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
-  const waveCount = 3;
+function WavesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
+  const theme = themeOverride || 
+    orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
+  
+  const waveCount = Math.min(5, Math.max(2, Math.floor(orbSpeed * 3))); // Dynamic wave count based on speed
   
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {Array.from({ length: waveCount }).map((_, i) => {
-        const delay = i * 0.4;
-        const duration = (5 - i * 0.5) / orbSpeed;
+        const delay = i * (0.4 / orbSpeed); // Shorter delay at higher speeds
+        const duration = (5 - i * 0.5) / (orbSpeed * 1.5); // More significant speed effect
         
         return (
           <motion.div
             key={i}
-            className={`absolute bottom-0 left-0 right-0 bg-${theme} opacity-20`}
-            style={{ height: '30%' }}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: `var(--${theme})`,
+              height: `${25 + (orbSpeed * 5)}%`,
+              opacity: 0.2
+            }}
             initial={{ y: '100%' }}
             animate={{
               y: ['100%', '-10%', '100%'],
@@ -560,6 +574,11 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
   );
 }
 
+// Memoize the animation components for better performance
+const MemoizedOrbsContainer = React.memo(OrbsContainer);
+const MemoizedParticlesContainer = React.memo(ParticlesContainer);
+const MemoizedWavesContainer = React.memo(WavesContainer);
+
 // -----------------------------------------------------
 // Main VerticalSlideshow Component
 // -----------------------------------------------------
@@ -622,16 +641,72 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const [newGifLink, setNewGifLink] = useState("");
 
   // Additional customization: Background theme and orb speed.
-  const backgroundThemes = [
-    { name: "Chic Blue", value: "#0D47A1" },
-    { name: "Royal Blue", value: "#1565C0" },
-    { name: "Midnight Blue", value: "#283593" },
-    { name: "Deep Teal", value: "#00695C" },
-    { name: "Classic Navy", value: "#1A237E" }
-  ];
-  const [selectedBackgroundTheme, setSelectedBackgroundTheme] = useState(backgroundThemes[0].value);
+  const backgroundThemes = useMemo(() => [
+    { 
+      name: "Chic Blue", 
+      value: "#0D47A1", 
+      orbTheme: "from-blue-500 to-indigo-500",
+      particleColor: "blue-500",
+      waveColor: "blue-500"
+    },
+    { 
+      name: "Royal Blue", 
+      value: "#1565C0", 
+      orbTheme: "from-indigo-500 to-violet-500",
+      particleColor: "indigo-500",
+      waveColor: "indigo-500"
+    },
+    { 
+      name: "Midnight Blue", 
+      value: "#283593", 
+      orbTheme: "from-purple-500 to-pink-500",
+      particleColor: "purple-500",
+      waveColor: "purple-500"
+    },
+    { 
+      name: "Deep Teal", 
+      value: "#00695C", 
+      orbTheme: "from-green-500 to-teal-500",
+      particleColor: "teal-500",
+      waveColor: "teal-500"
+    },
+    { 
+      name: "Classic Navy", 
+      value: "#1A237E", 
+      orbTheme: "from-blue-500 to-cyan-500",
+      particleColor: "blue-500",
+      waveColor: "blue-500"
+    }
+  ], []);
+  
+  const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [orbSpeed, setOrbSpeed] = useState(1);
   const [backgroundAnimationType, setBackgroundAnimationType] = useState('orbs');
+
+  // For performance and to avoid recreating these objects
+  const selectedTheme = useMemo(() => 
+    backgroundThemes[selectedThemeIndex], [backgroundThemes, selectedThemeIndex]);
+
+  // CSS Variables for theme colors
+  useEffect(() => {
+    // Apply CSS variables for the theme colors
+    document.documentElement.style.setProperty('--pink-500', '#ec4899');
+    document.documentElement.style.setProperty('--purple-500', '#a855f7');
+    document.documentElement.style.setProperty('--blue-500', '#3b82f6');
+    document.documentElement.style.setProperty('--cyan-500', '#06b6d4');
+    document.documentElement.style.setProperty('--green-500', '#22c55e');
+    document.documentElement.style.setProperty('--teal-500', '#14b8a6');
+    document.documentElement.style.setProperty('--red-500', '#ef4444');
+    document.documentElement.style.setProperty('--orange-500', '#f97316');
+    document.documentElement.style.setProperty('--yellow-500', '#eab308');
+    document.documentElement.style.setProperty('--amber-500', '#f59e0b');
+    document.documentElement.style.setProperty('--indigo-500', '#6366f1');
+    document.documentElement.style.setProperty('--violet-500', '#8b5cf6');
+    document.documentElement.style.setProperty('--rose-500', '#f43f5e');
+    document.documentElement.style.setProperty('--fuchsia-500', '#d946ef');
+    document.documentElement.style.setProperty('--lime-500', '#84cc16');
+    document.documentElement.style.setProperty('--emerald-500', '#10b981');
+  }, []);
 
   // Animation controls for the slide text
   const textControls = useAnimation();
@@ -878,12 +953,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
           <div>
             <label className="text-white font-bold mr-2">Background Theme:</label>
             <select
-              value={selectedBackgroundTheme}
-              onChange={(e) => setSelectedBackgroundTheme(e.target.value)}
+              value={selectedThemeIndex}
+              onChange={(e) => setSelectedThemeIndex(Number(e.target.value))}
               className="p-1 border rounded"
             >
-              {backgroundThemes.map(theme => (
-                <option key={theme.value} value={theme.value}>{theme.name}</option>
+              {backgroundThemes.map((theme, index) => (
+                <option key={index} value={index}>{theme.name}</option>
               ))}
             </select>
           </div>
@@ -904,12 +979,13 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <input
               type="range"
               min="0.5"
-              max="2"
+              max="3"
               step="0.1"
               value={orbSpeed}
               onChange={(e) => setOrbSpeed(Number(e.target.value))}
               className="cursor-pointer"
             />
+            <span className="text-white ml-1">{orbSpeed.toFixed(1)}x</span>
           </div>
         </div>
       </div>
@@ -918,17 +994,29 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       <div
         ref={containerRef}
         className="relative aspect-[9/16] w-full max-w-xl overflow-hidden rounded-3xl shadow-xl flex flex-col p-4"
-        style={{ backgroundColor: selectedBackgroundTheme }}
+        style={{ backgroundColor: selectedTheme.value }}
       >
         {/* Render the appropriate background animation */}
         {backgroundAnimationType === 'orbs' && (
-          <OrbsContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+          <MemoizedOrbsContainer 
+            slideIndex={currentSlide} 
+            orbSpeed={orbSpeed} 
+            themeOverride={selectedTheme.orbTheme} 
+          />
         )}
         {backgroundAnimationType === 'particles' && (
-          <ParticlesContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+          <MemoizedParticlesContainer 
+            slideIndex={currentSlide} 
+            orbSpeed={orbSpeed} 
+            themeOverride={selectedTheme.particleColor} 
+          />
         )}
         {backgroundAnimationType === 'waves' && (
-          <WavesContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+          <MemoizedWavesContainer 
+            slideIndex={currentSlide} 
+            orbSpeed={orbSpeed} 
+            themeOverride={selectedTheme.waveColor} 
+          />
         )}
         
         <motion.div
