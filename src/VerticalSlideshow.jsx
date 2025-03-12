@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useAnimation } from 'framer-motion';
+import VersionInfo from './components/VersionInfo';
+import BackupManager from './components/BackupManager';
+import { createBackup } from './utils/version';
 
 // -----------------------------------------------------
 // Orb and Background Helpers
@@ -127,14 +130,23 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 // -----------------------------------------------------
 const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Slide text data.
-  const slidesData = [
+  const [slidesData, setSlidesData] = useState([
     "This just made high-end AI way more affordable for everyday users.",
-    "Turns out, even AI fans won’t pay *any* price.",
+    "Turns out, even AI fans won't pay *any* price.",
     "For a few bucks, you can test if this AI actually *feels* smarter.",
     "Like it or not, AI is already part of daily life for millions.",
     "Is this really an upgrade, or does Claude 3.7 win?",
     "Time to see what this means for real creative work."
-  ];  
+  ]);
+  
+  // Text color state
+  const [textColor, setTextColor] = useState('#FFFFFF');
+  
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // Backup manager state
+  const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
   
   const totalSlides = slidesData.length;
   
@@ -327,12 +339,40 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     setDroppedGifs([]);
   };
 
+  // Create automatic backup when slides change
+  useEffect(() => {
+    createBackup(slidesData);
+  }, [slidesData]);
+
+  // Handle saving edited slides
+  const handleSaveSlides = (newSlides, newTextColor) => {
+    setSlidesData(newSlides);
+    setTextColor(newTextColor);
+    
+    // If current slide is now out of bounds, reset to first slide
+    if (currentSlide >= newSlides.length) {
+      setCurrentSlide(0);
+    }
+    
+    // Create a named backup after editing
+    createBackup(newSlides, 'after-edit-' + new Date().toISOString().slice(0, 10));
+  };
+  
+  // Handle restoring slides from backup
+  const handleRestoreBackup = (restoredSlides) => {
+    setSlidesData(restoredSlides);
+    
+    // If current slide is now out of bounds, reset to first slide
+    if (currentSlide >= restoredSlides.length) {
+      setCurrentSlide(0);
+    }
+  };
+
   return (
-    <div className="w-full flex flex-col items-center relative overflow-hidden">
-      {/* Control Dock */}
-      <div className="flex flex-col gap-4 mb-4 justify-center">
-        {/* Top Buttons */}
-        <div className="flex flex-wrap gap-4 justify-center">
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
+      {/* Controls */}
+      <div className="mb-8 flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2 justify-center">
           <input type="file" accept="image/*" onChange={handleImageUpload} className="p-2 border rounded" />
           {uploadedImage && (
             <button onClick={handleRemoveImage} className="p-2 bg-red-500 text-white rounded">
@@ -357,8 +397,19 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
           <button onClick={resetTextPosition} className="p-2 bg-blue-500 text-white rounded">
             Reset Text Position ("\")
           </button>
+          <button 
+            onClick={() => setIsEditModalOpen(true)} 
+            className="p-2 bg-purple-600 text-white rounded hover:bg-purple-500"
+          >
+            Edit Slides
+          </button>
+          <button 
+            onClick={() => setIsBackupManagerOpen(true)} 
+            className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-500"
+          >
+            Manage Backups
+          </button>
         </div>
-        {/* Background and Orb Speed Controls */}
         <div className="flex flex-wrap gap-4 justify-center">
           <div>
             <label className="text-white font-bold mr-2">Background Theme:</label>
@@ -394,6 +445,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         style={{ backgroundColor: selectedBackgroundTheme }}
       >
         <OrbsContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+        
+        {/* Version info display */}
+        <div className="absolute top-2 right-2 z-50">
+          <VersionInfo />
+        </div>
+        
         <motion.div
           className="absolute z-20 text-white font-bold text-lg cursor-pointer"
           style={{ left: '31.8%', top: '5rem' }}
@@ -491,6 +548,23 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
           Add GIF
         </button>
       </div>
+      
+      {/* Edit Slides Modal */}
+      <EditSlidesModal 
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        slides={slidesData}
+        onSave={handleSaveSlides}
+      />
+      
+      {/* Backup Manager */}
+      {isBackupManagerOpen && (
+        <BackupManager 
+          slides={slidesData}
+          onRestore={handleRestoreBackup}
+          onClose={() => setIsBackupManagerOpen(false)}
+        />
+      )}
     </div>
   );
 };
