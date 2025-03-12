@@ -19,15 +19,39 @@ const orbColorThemes = [
 
 // Define the components first before using them
 function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 90 }) {
-  const orbs = useSlideOrbs(slideIndex, 12, orbSpeed, themeOverride);
-  // Always ensure a minimum blur for orbs
+  // Use fewer orbs for better performance
+  const orbCount = 6; // Reduced from 12
+  const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
   const effectiveBlur = Math.max(20, blurAmount);
+  
+  // Generate orbs with memoization
+  const orbs = useMemo(() => {
+    const newOrbs = [];
+    // More direct relationship between speed slider and actual speed
+    const effectiveSpeed = orbSpeed * 2; 
+    
+    for (let i = 0; i < orbCount; i++) {
+      const baseDuration = 20 + i * 3;
+      // Direct relationship between slider and duration
+      const duration = baseDuration / effectiveSpeed;
+      
+      newOrbs.push({
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        theme: theme,
+        width: 250 + Math.random() * 300,
+        height: 250 + Math.random() * 300,
+        duration: duration
+      });
+    }
+    return newOrbs;
+  }, [orbCount, orbSpeed, theme]);
   
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {orbs.map((orb, index) => (
         <motion.div
-          key={`orb-${index}`}
+          key={`orb-${slideIndex}-${index}`}
           className={`absolute rounded-full bg-gradient-to-br ${orb.theme} opacity-80`}
           style={{
             width: orb.width,
@@ -41,22 +65,20 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
             x: [
               `${orb.x}%`,
               `${(orb.x + 20) % 100}%`,
-              `${(orb.x + 40) % 100}%`,
               `${orb.x}%`
             ],
             y: [
               `${orb.y}%`,
               `${(orb.y + 30) % 100}%`,
-              `${(orb.y + 10) % 100}%`,
               `${orb.y}%`
             ],
-            scale: [1, 1.05, 0.95, 1]
+            scale: [1, 1.05, 1]
           }}
           transition={{
             duration: orb.duration,
             ease: "easeInOut",
             repeat: Infinity,
-            repeatType: "reverse"
+            repeatType: "mirror"
           }}
         />
       ))}
@@ -65,32 +87,31 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
 }
 
 function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
-  const [particles, setParticles] = useState([]);
+  // Use fewer particles for better performance
+  const particleCount = 50; // Reduced from 100
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
-  // Less aggressive blur for particles so they don't disappear completely
   const effectiveBlur = Math.max(5, Math.min(blurAmount / 3, 30));
   
-  useEffect(() => {
+  // Generate particles with memoization
+  const particles = useMemo(() => {
     const newParticles = [];
-    // Increase the number of particles for better visibility 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < particleCount; i++) {
       newParticles.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 10 + Math.random() * 25,  // Much larger particles for better visibility
-        // Make speed directly proportional to orbSpeed - more intuitive behavior
+        size: 10 + Math.random() * 25,
         duration: (5 + Math.random() * 5) / (Math.max(0.2, orbSpeed * 2)),
       });
     }
-    setParticles(newParticles);
-  }, [slideIndex, orbSpeed, themeOverride]);
+    return newParticles;
+  }, [particleCount, orbSpeed]);
 
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {particles.map((particle) => (
         <motion.div
-          key={`particle-${particle.id}`}
+          key={`particle-${slideIndex}-${particle.id}`}
           className={`absolute rounded-full bg-gradient-to-br ${theme} opacity-90`}
           style={{
             width: `${particle.size}px`,
@@ -101,16 +122,16 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
             zIndex: 5
           }}
           animate={{
-            x: [0, Math.random() * 150 - 75, Math.random() * 150 - 75, 0],
-            y: [0, Math.random() * 150 - 75, Math.random() * 150 - 75, 0],
-            opacity: [0, 0.9, 0.9, 0],
-            scale: [0, 1.5, 1.5, 0],
+            x: [0, Math.random() * 100 - 50, 0],
+            y: [0, Math.random() * 100 - 50, 0],
+            opacity: [0, 0.9, 0],
+            scale: [0, 1.5, 0],
           }}
           transition={{
             duration: particle.duration,
             ease: "easeInOut",
             repeat: Infinity,
-            delay: Math.random() * 2,
+            delay: Math.random()
           }}
         />
       ))}
@@ -398,14 +419,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     }
   ], []);
 
-  // Replace the complex color generation with a simpler, more stable approach
-  const generateRandomSlideColor = useCallback((themeIndex, slideIndex) => {
-    const theme = backgroundThemes[themeIndex];
-    const colors = theme.slideColors;
-    
-    // Simply use the color from the array based on slideIndex
-    return colors[slideIndex % colors.length];
-  }, [backgroundThemes]);
+  // Store slide colors in a simplified way
+  const [slideBackgroundColor, setSlideBackgroundColor] = useState(null);
   
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -430,6 +445,16 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const containerRef = useRef(null);
   const [newGifLink, setNewGifLink] = useState("");
 
+  // Animation controls and refs - defined early to fix ESLint warnings
+  const textControls = useAnimation();
+  const baseX = useMotionValue(0);
+  const baseY = useMotionValue(0);
+  const springX = useSpring(baseX, { stiffness: 300, damping: 20 });
+  const springY = useSpring(baseY, { stiffness: 300, damping: 20 });
+  const keysPressed = useRef({ w: false, a: false, s: false, d: false });
+  const lastTimeRef = useRef(null);
+  const rafId = useRef(null);
+  
   // Function to generate a color with a shifted hue
   const shiftHue = (baseColor, shift) => {
     // Simple CSS variable to adjust on the fly
@@ -445,9 +470,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // For performance and to avoid recreating these objects
   const selectedTheme = useMemo(() => 
     backgroundThemes[selectedThemeIndex], [backgroundThemes, selectedThemeIndex]);
-
-  // Store slide colors in a simpler way
-  const [slideBackgroundColor, setSlideBackgroundColor] = useState(null);
 
   // Use a simpler color approach without the complex mapping and lookups
   // Set color directly when theme or slide changes
@@ -498,191 +520,11 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     };
   }, [currentSlide, textControls, baseX, baseY]);
 
-  // CSS Variables for theme colors
-  useEffect(() => {
-    // Apply CSS variables for the theme colors - light to dark ranges
-    document.documentElement.style.setProperty('--pink-500', '#ec4899');
-    document.documentElement.style.setProperty('--purple-500', '#a855f7');
-    document.documentElement.style.setProperty('--purple-600', '#9333ea');
-    document.documentElement.style.setProperty('--purple-700', '#7e22ce');
-    document.documentElement.style.setProperty('--purple-800', '#6b21a8');
-    document.documentElement.style.setProperty('--purple-900', '#581c87');
-    
-    document.documentElement.style.setProperty('--blue-500', '#3b82f6');
-    document.documentElement.style.setProperty('--blue-600', '#2563eb');
-    document.documentElement.style.setProperty('--blue-700', '#1d4ed8');
-    document.documentElement.style.setProperty('--blue-800', '#1e40af');
-    document.documentElement.style.setProperty('--blue-900', '#1e3a8a');
-    
-    document.documentElement.style.setProperty('--cyan-500', '#06b6d4');
-    
-    document.documentElement.style.setProperty('--green-500', '#22c55e');
-    document.documentElement.style.setProperty('--green-700', '#15803d');
-    document.documentElement.style.setProperty('--green-800', '#166534');
-    document.documentElement.style.setProperty('--green-900', '#14532d');
-    
-    document.documentElement.style.setProperty('--teal-500', '#14b8a6');
-    document.documentElement.style.setProperty('--teal-900', '#134e4a');
-    
-    document.documentElement.style.setProperty('--red-500', '#ef4444');
-    document.documentElement.style.setProperty('--red-700', '#b91c1c');
-    document.documentElement.style.setProperty('--red-800', '#991b1b');
-    document.documentElement.style.setProperty('--red-900', '#7f1d1d');
-    
-    document.documentElement.style.setProperty('--rose-500', '#f43f5e');
-    document.documentElement.style.setProperty('--rose-900', '#881337');
-    
-    document.documentElement.style.setProperty('--orange-500', '#f97316');
-    
-    document.documentElement.style.setProperty('--yellow-500', '#eab308');
-    document.documentElement.style.setProperty('--yellow-600', '#ca8a04');
-    
-    document.documentElement.style.setProperty('--amber-500', '#f59e0b');
-    document.documentElement.style.setProperty('--amber-700', '#b45309');
-    document.documentElement.style.setProperty('--amber-800', '#92400e');
-    document.documentElement.style.setProperty('--amber-900', '#78350f');
-    
-    document.documentElement.style.setProperty('--indigo-500', '#6366f1');
-    document.documentElement.style.setProperty('--indigo-800', '#3730a3');
-    
-    document.documentElement.style.setProperty('--violet-500', '#8b5cf6');
-    document.documentElement.style.setProperty('--violet-900', '#4c1d95');
-    
-    document.documentElement.style.setProperty('--fuchsia-500', '#d946ef');
-    
-    document.documentElement.style.setProperty('--lime-500', '#84cc16');
-    
-    document.documentElement.style.setProperty('--emerald-500', '#10b981');
-    
-    // Set the initial hue-shift variable
-    document.documentElement.style.setProperty('--hue-shift', `${globalHueShift}deg`);
-  }, [globalHueShift]);
-
-  // Animation controls for the slide text
-  const textControls = useAnimation();
-  
-  // Animate to the base (default) state whenever the slide changes.
-  useEffect(() => {
-    textControls.start({
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: "drop-shadow(0 0 25px rgba(255,255,255,0.5))",
-      transition: {
-        opacity: { duration: 0.6, ease: "easeInOut" },
-        y: { duration: 0.6, ease: "easeInOut" },
-        scale: { duration: 0.6, ease: "easeInOut" }
-      }
-    });
-  }, [currentSlide, textControls]);
-  
-  // Draggable slide text.
-  const baseX = useMotionValue(0);
-  const baseY = useMotionValue(0);
-  const springX = useSpring(baseX, { stiffness: 300, damping: 20 });
-  const springY = useSpring(baseY, { stiffness: 300, damping: 20 });
-
   // Reset functionality
   const resetTextPosition = useCallback(() => {
     baseX.set(0);
     baseY.set(0);
   }, [baseX, baseY]);
-
-  // WASD movement with RAF
-  const keysPressed = useRef({ w: false, a: false, s: false, d: false });
-  const lastTimeRef = useRef(null);
-  const rafId = useRef(null);
-  const movementSpeed = 0.5;
-
-  // Update the text movement logic with better cleanup
-  useEffect(() => {
-    // Prevent multiple animation frames
-    if (rafId.current) {
-      cancelAnimationFrame(rafId.current);
-      rafId.current = null;
-    }
-    
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = true;
-    };
-
-    const handleKeyUp = (e) => {
-      const key = e.key.toLowerCase();
-      if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = false;
-    };
-
-    function animate(time) {
-      if (!lastTimeRef.current) lastTimeRef.current = time;
-      const delta = time - lastTimeRef.current;
-      lastTimeRef.current = time;
-      const movement = movementSpeed * delta;
-
-      if (keysPressed.current.w) baseY.set(baseY.get() - movement);
-      if (keysPressed.current.s) baseY.set(baseY.get() + movement);
-      if (keysPressed.current.a) baseX.set(baseX.get() - movement);
-      if (keysPressed.current.d) baseX.set(baseX.get() + movement);
-
-      rafId.current = requestAnimationFrame(animate);
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    rafId.current = requestAnimationFrame(animate);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      if (rafId.current) {
-        cancelAnimationFrame(rafId.current);
-        rafId.current = null;
-      }
-      // Reset time reference to prevent delta time jumps between mounts
-      lastTimeRef.current = null;
-    };
-  }, [baseX, baseY, movementSpeed]);
-
-  // Fix the E key glow effect with proper cleanup
-  useEffect(() => {
-    let isActive = true; // Flag to prevent stale animations
-    
-    const handleKeyDown = (e) => {
-      if (e.key.toLowerCase() === 'e' && isActive) {
-        // Cancel any previous animations to prevent queuing
-        textControls.stop();
-        textControls.start({
-          filter: [
-            "drop-shadow(0 0 0px rgba(255,255,255,0))",
-            "drop-shadow(0 0 25px rgba(255,255,255,1))",
-            "drop-shadow(0 0 0px rgba(255,255,255,0))"
-          ],
-          transition: {
-            duration: 0.6,
-            times: [0, 0.3, 1],
-            ease: "easeInOut"
-          }
-        });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    
-    return () => {
-      isActive = false; // Prevent animations after unmount
-      window.removeEventListener('keydown', handleKeyDown);
-      // Clean up any hanging animations
-      textControls.stop();
-    };
-  }, [textControls]);
-
-  // Add back the backslash key reset effect
-  useEffect(() => {
-    const handleResetKey = (e) => {
-      if (e.key === "\\") resetTextPosition();
-    };
-    window.addEventListener('keydown', handleResetKey);
-    return () => window.removeEventListener('keydown', handleResetKey);
-  }, [resetTextPosition]);
 
   // Slide navigation.
   const handleNext = () =>
