@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fallback background colors for the entire application */
+html, body, #root {
+  min-height: 100vh;
+  background-color: #0A2472 !important; /* Dark blue fallback */
+}
+
+/* Ensure text is visible against dark backgrounds */
+body {
+  color: white;
+}

@@ -145,4 +145,15 @@ export const deleteBackup = (backupName) => {
     console.error('Error deleting backup:', error);
     return false;
   }
+};
+
+// Clear all backups
+export const clearAllBackups = () => {
+  try {
+    localStorage.setItem('slideBackups', '{}');
+    return true;
+  } catch (error) {
+    console.error('Error clearing all backups:', error);
+    return false;
+  }
 }; 

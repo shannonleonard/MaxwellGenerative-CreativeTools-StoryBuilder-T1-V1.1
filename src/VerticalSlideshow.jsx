@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useAnimation } from 'framer-motion';
 import BackupManager from './components/BackupManager';
-import { createBackup } from './utils/version';
+import { 
+  createBackup, 
+  formatVersion,
+  getVersion 
+} from './utils/version';
 
 // -----------------------------------------------------
 // Orb and Background Helpers
@@ -203,8 +207,13 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 // Edit Slides Modal Component
 // -----------------------------------------------------
 function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
-  const [editedSlides, setEditedSlides] = useState(slides.join('\n'));
+  const [editedSlides, setEditedSlides] = useState(slides);
   const textareaRef = useRef(null);
+
+  // Update edited slides when slides prop changes
+  useEffect(() => {
+    setEditedSlides(slides);
+  }, [slides]);
 
   // Focus the textarea when the modal opens
   useEffect(() => {
@@ -214,13 +223,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
   }, [isOpen]);
 
   const handleSave = () => {
-    // Split the text by newlines and filter out empty lines
-    const slideLines = editedSlides
-      .split('\n')
-      .map(slide => slide.trim())
-      .filter(slide => slide.length > 0);
-    
-    onSave(slideLines);
+    onSave(editedSlides);
     onClose();
   };
 
@@ -255,34 +258,44 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
+  
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <h2 className="text-white text-2xl font-bold mb-4">Edit Slides</h2>
-        
-        <div className="flex-1 overflow-hidden mb-4">
-          <label className="text-white block mb-2">
-            Enter each slide on a new line:
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75 p-4">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-3xl">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">Edit Slides</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="mb-6">
+          <label className="block text-white mb-2">
+            Edit slide text (one slide per line):
           </label>
           <textarea
             ref={textareaRef}
-            value={editedSlides}
-            onChange={(e) => setEditedSlides(e.target.value)}
+            value={editedSlides.join('\n')}
+            onChange={(e) => setEditedSlides(e.target.value.split('\n'))}
             className="w-full h-[300px] p-3 bg-gray-700 text-white rounded resize-none"
             style={{ overflowY: 'auto' }}
+            placeholder="Enter slide text..."
           />
+          <p className="text-gray-400 text-sm mt-1">
+            The number of lines equals the number of slides.
+          </p>
         </div>
-        
-        <div className="flex justify-end gap-3">
-          <button 
-            onClick={onClose} 
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500"
           >
             Cancel
           </button>
-          <button 
-            onClick={handleSave} 
+          <button
+            onClick={handleSave}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
           >
             Save Changes
@@ -302,12 +315,13 @@ class AnimationErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     // Update state so the next render will show the fallback UI
+    console.error("Animation error caught by boundary:", error);
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
     // Log the error to the console
-    console.error("Animation error:", error, errorInfo);
+    console.error("Animation error details:", error, errorInfo);
   }
 
   componentDidUpdate(prevProps) {
@@ -319,13 +333,25 @@ class AnimationErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // Fallback UI if animation fails
+      // Fallback UI if animation fails - ensures there's always a visible background
+      const fallbackColor = this.props.backgroundColor || '#0A2472';
       return (
-        <div className="absolute inset-0 bg-opacity-50" style={{ 
+        <div className="absolute inset-0" style={{ 
           zIndex: 5, 
-          backgroundColor: this.props.backgroundColor
+          backgroundColor: fallbackColor,
+          opacity: 0.9,
+          filter: 'hue-rotate(var(--hue-shift))'
         }}>
-          {/* Simple background with no animations */}
+          {/* Simple static background when animations fail */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-600 to-indigo-800 opacity-50 blur-3xl"
+               style={{ 
+                 left: '30%', 
+                 top: '30%', 
+                 width: '40%', 
+                 height: '40%',
+                 filter: 'blur(90px) hue-rotate(var(--hue-shift))'
+               }}>
+          </div>
         </div>
       );
     }
@@ -337,16 +363,18 @@ class AnimationErrorBoundary extends React.Component {
 // -----------------------------------------------------
 // Main VerticalSlideshow Component
 // -----------------------------------------------------
-const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
+const VerticalSlideshow = ({ currentSlide, setCurrentSlide, onSlidesCountChange }) => {
   // Slide text data - simplified to just text strings
   const [slidesData, setSlidesData] = useState([
-    "This just made high-end AI way more affordable for everyday users.",
-    "Turns out, even AI fans won't pay *any* price.",
-    "For a few bucks, you can test if this AI actually *feels* smarter.",
-    "Like it or not, AI is already part of daily life for millions.",
-    "Is this really an upgrade, or does Claude 3.7 win?",
-    "Time to see what this means for real creative work."
+    "This just made high-end AI way more affordable for everyday users.\nTurns out, even AI fans won't pay *any* price.\nFor a few bucks, you can test if this AI actually *feels* smarter.\nLike it or not, AI is already part of daily life for millions.\nIs this really an upgrade, or does Claude 3.7 win?\nTime to see what this means for real creative work."
   ]);
+  
+  // Split the first slide text into lines to create dynamic slides
+  const slideLines = useMemo(() => {
+    if (slidesData.length === 0) return [""];
+    // Split the first slide's text by newlines
+    return slidesData[0].split('\n').filter(line => line.trim() !== "");
+  }, [slidesData]);
   
   // Global text styling
   const [globalTextColor, setGlobalTextColor] = useState("#FFFFFF");
@@ -395,7 +423,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     }
   ], []);
 
-  // Store slide colors in a simplified way
+  // Store slide colors in a simplified way - used for color management
   const [slideBackgroundColor, setSlideBackgroundColor] = useState(null);
   
   // Edit modal state
@@ -404,7 +432,10 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Backup manager state
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
   
-  const totalSlides = slidesData.length;
+  // Use the number of lines as the total number of slides
+  // This dynamically sets the number of slides based on how many lines of text are in slidesData[0]
+  // If there are 15 lines, there will be 15 slides. If fewer lines, fewer slides.
+  const totalSlides = slideLines.length;
   
   // Global size state: affects uploaded image and all dropped GIFs.
   const [imageSize, setImageSize] = useState(1);
@@ -444,6 +475,10 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const [orbSpeed, setOrbSpeed] = useState(1);
   const [backgroundAnimationType, setBackgroundAnimationType] = useState('orbs');
   const [blurAmount, setBlurAmount] = useState(50); // Default blur amount in pixels
+  const [siteTitleOpacity, setSiteTitleOpacity] = useState(0.8); // Control the opacity of the website title
+  const [siteTitlePosition, setSiteTitlePosition] = useState(5); // Position in rem units, default is 5rem from top
+  const [siteTitleAnimationEnabled, setSiteTitleAnimationEnabled] = useState(true); // Toggle for title animation
+  const [slideFontSize, setSlideFontSize] = useState(2.25); // Font size for slide text in rem (default 2.25rem = text-4xl)
 
   // For performance and to avoid recreating these objects
   const selectedTheme = useMemo(() => 
@@ -505,11 +540,24 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     baseY.set(0);
   }, [baseX, baseY]);
 
-  // Slide navigation.
-  const handleNext = () =>
-    setCurrentSlide((prev) => (prev + 1) % totalSlides);
-  const handlePrevious = () =>
-    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  // Slide navigation with looping behavior
+  const handleNext = () => {
+    // Loop back to the first slide when reaching the end
+    if (currentSlide >= totalSlides - 1) {
+      setCurrentSlide(0);
+    } else {
+      setCurrentSlide(currentSlide + 1);
+    }
+  };
+  
+  const handlePrevious = () => {
+    // Loop to the last slide when at the first slide
+    if (currentSlide <= 0) {
+      setCurrentSlide(totalSlides - 1);
+    } else {
+      setCurrentSlide(currentSlide - 1);
+    }
+  };
 
   // Image upload handlers.
   const handleImageUpload = (e) => {
@@ -561,32 +609,77 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     setDroppedGifs([]);
   };
 
-  // Handle saving edited slides - much simpler now
+  // Handle saving edited slides
   const handleSaveSlides = (newSlides) => {
-    setSlidesData(newSlides);
+    // Convert the array of separate slides back to a single string with newlines
+    const combinedSlide = newSlides.join('\n');
+    setSlidesData([combinedSlide]);
+    
+    // Create an automatic backup when slides are edited
+    createBackup([combinedSlide], 'auto-' + new Date().toISOString().slice(0, 10));
     
     // If current slide is now out of bounds, reset to first slide
     if (currentSlide >= newSlides.length) {
       setCurrentSlide(0);
     }
     
-    // Create a named backup after editing
-    createBackup(newSlides, 'after-edit-' + new Date().toISOString().slice(0, 10));
+    // Close the edit modal
+    setIsEditModalOpen(false);
   };
   
-  // Simplified backup restore
+  // Handle backup restoration
   const handleRestoreBackup = (restoredSlides) => {
-    // Always ensure we have an array of strings
-    const formattedSlides = Array.isArray(restoredSlides) ? 
-      restoredSlides.map(slide => typeof slide === 'string' ? slide : 
-        (slide && slide.text) ? slide.text : String(slide)
-      ) : [];
-    
-    setSlidesData(formattedSlides);
-    
-    // If current slide is now out of bounds, reset to first slide
-    if (currentSlide >= formattedSlides.length) {
+    if (restoredSlides && restoredSlides.length > 0) {
+      // Convert the old format if needed
+      let formattedSlide;
+      
+      try {
+        // Check if we're dealing with an array of strings (old format) or array with objects
+        if (Array.isArray(restoredSlides)) {
+          if (typeof restoredSlides[0] === 'string') {
+            if (restoredSlides.length === 1) {
+              // Already in the new format (single string with newlines)
+              formattedSlide = restoredSlides[0];
+            } else {
+              // Old format (multiple slides as separate strings)
+              formattedSlide = restoredSlides.join('\n');
+            }
+          } else if (restoredSlides[0] && restoredSlides[0].text) {
+            // Very old format (object with text property)
+            formattedSlide = restoredSlides.map(slide => slide.text).join('\n');
+          } else {
+            // Try to convert unknown array format to string
+            formattedSlide = restoredSlides.join('\n');
+          }
+        } else if (typeof restoredSlides === 'string') {
+          // Direct string format
+          formattedSlide = restoredSlides;
+        } else {
+          // Unknown format, convert to string
+          formattedSlide = String(restoredSlides);
+          console.log("Unknown backup format, converted to:", formattedSlide);
+        }
+        
+        // Ensure we have valid content
+        if (!formattedSlide || formattedSlide.trim() === '') {
+          formattedSlide = "Empty backup restored";
+        }
+      } catch (error) {
+        console.error("Error processing backup:", error);
+        formattedSlide = "Error restoring backup";
+      }
+      
+      // Set the slides data with the properly formatted slide
+      setSlidesData([formattedSlide]);
+      
+      // Close the backup manager
+      setIsBackupManagerOpen(false);
+      
+      // Reset to first slide
       setCurrentSlide(0);
+      
+      // Log success for debugging
+      console.log("Backup successfully restored and loaded:", formattedSlide);
     }
   };
 
@@ -685,6 +778,34 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     return () => window.removeEventListener('keydown', handleResetKey);
   }, [resetTextPosition]);
 
+  // Handle up/down arrow keys to move the site title
+  useEffect(() => {
+    const handleArrowKeys = (e) => {
+      // Only respond to arrow keys if no modals are open
+      if (!isEditModalOpen && !isBackupManagerOpen) {
+        if (e.key === 'ArrowUp') {
+          // Move title up (decrease position value) - faster movement
+          setSiteTitlePosition(prev => Math.max(0, prev - 1.5));
+          e.preventDefault(); // Prevent page scrolling
+        } else if (e.key === 'ArrowDown') {
+          // Move title down (increase position value) - faster movement
+          setSiteTitlePosition(prev => Math.min(20, prev + 1.5));
+          e.preventDefault(); // Prevent page scrolling
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleArrowKeys);
+    return () => window.removeEventListener('keydown', handleArrowKeys);
+  }, [isEditModalOpen, isBackupManagerOpen]);
+
+  // Notify parent component of the total slides count
+  useEffect(() => {
+    if (onSlidesCountChange) {
+      onSlidesCountChange(totalSlides);
+    }
+  }, [totalSlides, onSlidesCountChange]);
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
       {/* Controls */}
@@ -745,6 +866,9 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                 <option key={index} value={index}>{theme.name}</option>
               ))}
             </select>
+            <div className="text-white text-xs mt-1 text-center">
+              Version {formatVersion(getVersion())}
+            </div>
           </div>
           <div>
             <label className="text-white font-bold mr-2">Color Shift:</label>
@@ -838,6 +962,55 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
               <option value="light">Light</option>
             </select>
           </div>
+          {/* Website Title Opacity Control */}
+          <div>
+            <label className="text-white font-bold mr-2">Title Opacity:</label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={siteTitleOpacity}
+              onChange={(e) => setSiteTitleOpacity(Number(e.target.value))}
+              className="cursor-pointer"
+            />
+            <span className="text-white ml-1">{(siteTitleOpacity * 100).toFixed(0)}%</span>
+            <p className="text-gray-400 text-xs mt-1">
+              Use ↑/↓ keys to move title position
+            </p>
+          </div>
+          
+          {/* Title Animation Toggle */}
+          <div>
+            <label className="text-white font-bold mr-2">Title Animation:</label>
+            <input
+              type="checkbox"
+              checked={siteTitleAnimationEnabled}
+              onChange={(e) => setSiteTitleAnimationEnabled(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <button
+              onClick={() => setSiteTitleAnimationEnabled(!siteTitleAnimationEnabled)}
+              className="ml-2 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-500"
+            >
+              {siteTitleAnimationEnabled ? "Disable" : "Enable"} Animation
+            </button>
+          </div>
+          
+          {/* Slide Text Font Size Slider */}
+          <div>
+            <label className="text-white font-bold mr-2">Slide Text Size:</label>
+            <input
+              type="range"
+              min="1"
+              max="4"
+              step="0.05"
+              value={slideFontSize}
+              onChange={(e) => setSlideFontSize(Number(e.target.value))}
+              className="cursor-pointer"
+            />
+            <span className="text-white ml-1">{slideFontSize.toFixed(2)}rem</span>
+          </div>
         </div>
       </div>
 
@@ -845,27 +1018,47 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       <div
         ref={containerRef}
         className="relative aspect-[9/16] w-full max-w-xl overflow-hidden rounded-3xl shadow-xl flex flex-col p-4"
-        style={{ backgroundColor: selectedTheme.value, position: 'relative' }}
+        style={{ 
+          backgroundColor: '#0A2472', // Hardcoded fallback color for reliability
+          position: 'relative' 
+        }}
       >
-        {/* Background layer - z-index: 1 */}
+        {/* Emergency fallback background - z-index: -1 */}
+        <div 
+          className="absolute inset-0 bg-blue-900" 
+          style={{ 
+            zIndex: -1 
+          }}
+        ></div>
+        
+        {/* Guaranteed fallback background - z-index: 0 */}
         <div 
           className="absolute inset-0" 
           style={{ 
-            backgroundColor: selectedTheme.value,
-            filter: `hue-rotate(var(--hue-shift))`,
+            backgroundColor: selectedTheme?.value || '#0A2472', // Guaranteed fallback color
+            zIndex: 0 
+          }}
+        ></div>
+        
+        {/* Main background layer - z-index: 1 */}
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            backgroundColor: selectedTheme?.value || '#0A2472', // Fallback color
+            filter: `hue-rotate(var(--hue-shift, 0deg))`, // Fallback for CSS var
             zIndex: 1
           }}
         ></div>
         
-        {/* Animation layer - above background (z-index: 5), below content */}
+        {/* Animation layer - z-index: 5 */}
         <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
           {/* Render the appropriate background animation with error boundary */}
-          <AnimationErrorBoundary currentSlide={currentSlide} backgroundColor={selectedTheme.value}>
+          <AnimationErrorBoundary currentSlide={currentSlide} backgroundColor={selectedTheme?.value || '#0A2472'}>
             {backgroundAnimationType === 'orbs' && (
               <MemoizedOrbsContainer 
                 slideIndex={currentSlide} 
                 orbSpeed={orbSpeed} 
-                themeOverride={selectedTheme.orbTheme} 
+                themeOverride={selectedTheme?.orbTheme} 
                 blurAmount={blurAmount}
               />
             )}
@@ -873,25 +1066,13 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
               <MemoizedParticlesContainer 
                 slideIndex={currentSlide} 
                 orbSpeed={orbSpeed} 
-                themeOverride={selectedTheme.orbTheme} 
+                themeOverride={selectedTheme?.orbTheme} 
                 blurAmount={blurAmount}
               />
             )}
           </AnimationErrorBoundary>
         </div>
         
-        {/* Website title - z-index: 20 */}
-        <motion.div
-          className="absolute text-white font-bold text-lg cursor-pointer"
-          style={{ left: '31.8%', top: '5rem', zIndex: 20 }}
-          initial={{ opacity: 1 }}
-          animate={{ opacity: [0.8, 1, 0.8], transition: { duration: 3, repeat: Infinity, ease: 'easeInOut' } }}
-          whileHover={{ rotate: [0, -3, 3, 0], scale: 1.15, filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.9))' }}
-          transition={{ type: 'spring', stiffness: 300 }}
-        >
-          creativeworkflowlab.com
-        </motion.div>
-
         {/* Content layer - slide text on top (z-index: 30) */}
         <div className="flex-1 mt-24 mb-[100px] flex items-start justify-center px-8 relative" style={{ zIndex: 30 }}>
           <motion.div
@@ -919,14 +1100,15 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                   y: { duration: 0.15, ease: "easeInOut" },
                   scale: { duration: 0.15, ease: "easeInOut" }
                 }}
-                className={`text-left max-w-2xl p-8 text-4xl leading-relaxed rounded-lg font-${globalFontWeight}`}
+                className={`text-left max-w-2xl p-8 leading-relaxed rounded-lg font-${globalFontWeight}`}
                 style={{
                   color: globalTextColor,
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                  textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                  fontSize: `${slideFontSize}rem`
                 }}
                 whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.7))', scale: 1.03 }}
               >
-                {slidesData[currentSlide]}
+                {slideLines[currentSlide]}
               </motion.div>
             </AnimatePresence>
           </motion.div>
@@ -960,6 +1142,41 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             ))}
           </AnimatePresence>
         </div>
+        
+        {/* Website title - z-index: 20 (MOVED HERE TO ENSURE PROPER ORDERING) */}
+        <motion.div
+          className="absolute text-white font-bold text-lg cursor-pointer"
+          style={{ 
+            left: '31.8%', 
+            top: `${siteTitlePosition}rem`, 
+            zIndex: 20
+          }}
+          initial={{ opacity: siteTitleOpacity }}
+          animate={{ 
+            opacity: siteTitleAnimationEnabled 
+              ? [siteTitleOpacity * 0.9, siteTitleOpacity, siteTitleOpacity * 0.9] 
+              : siteTitleOpacity, 
+            transition: siteTitleAnimationEnabled 
+              ? { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+              : { duration: 0 }
+          }}
+          whileHover={ siteTitleAnimationEnabled ? { 
+            rotate: [0, -3, 3, 0], 
+            scale: 1.15, 
+            filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.9))',
+            transition: { 
+              rotate: { repeat: Infinity, duration: 1.5 },
+              scale: { duration: 0.2 },
+              filter: { duration: 0.2 }
+            }
+          } : {
+            scale: 1.15,
+            filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.9))',
+            transition: { duration: 0.2 }
+          }}
+        >
+          creativeworkflowlab.com
+        </motion.div>
       </div>
 
       {/* Fixed GIF Picker Panel */}
@@ -983,7 +1200,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       <EditSlidesModal 
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        slides={slidesData}
+        slides={slideLines}
         onSave={handleSaveSlides}
       />
       
