@@ -70,19 +70,20 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
   const [particles, setParticles] = useState([]);
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
   // Always ensure a minimum blur for particles
-  const effectiveBlur = Math.max(5, blurAmount / 3);
+  const effectiveBlur = Math.max(15, blurAmount / 2);
   
   console.log('Particles theme:', themeOverride);
   
   useEffect(() => {
     const newParticles = [];
-    for (let i = 0; i < 60; i++) {  // Increased number of particles
+    // Increase the number of particles for better visibility 
+    for (let i = 0; i < 100; i++) {
       newParticles.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 2 + Math.random() * 8,  // Slightly larger particles
-        duration: (3 + Math.random() * 7) / (Math.max(0.5, orbSpeed || 1)),
+        size: 5 + Math.random() * 15,  // Larger particles for better visibility
+        duration: (3 + Math.random() * 7) / (Math.max(0.5, orbSpeed * 1.5 || 1)), // Make more responsive to speed
       });
     }
     setParticles(newParticles);
@@ -93,7 +94,7 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
       {particles.map((particle) => (
         <motion.div
           key={`particle-${particle.id}`}
-          className={`absolute rounded-full bg-gradient-to-br ${theme}`}
+          className={`absolute rounded-full bg-gradient-to-br ${theme} opacity-90`}
           style={{
             width: `${particle.size}px`,
             height: `${particle.size}px`,
@@ -103,10 +104,10 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
             zIndex: 5
           }}
           animate={{
-            x: [0, Math.random() * 100 - 50, Math.random() * 100 - 50, 0],
-            y: [0, Math.random() * 100 - 50, Math.random() * 100 - 50, 0],
-            opacity: [0, 0.9, 0.9, 0],  // More visible
-            scale: [0, 1.2, 1.2, 0],  // Slightly larger scale
+            x: [0, Math.random() * 150 - 75, Math.random() * 150 - 75, 0],
+            y: [0, Math.random() * 150 - 75, Math.random() * 150 - 75, 0],
+            opacity: [0, 0.9, 0.9, 0],
+            scale: [0, 1.5, 1.5, 0],
           }}
           transition={{
             duration: particle.duration,
@@ -122,20 +123,20 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
 
 function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
-  const speed = Math.max(0.3, orbSpeed || 1);
+  const speed = Math.max(0.3, orbSpeed * 1.5 || 1); // Make more responsive to speed
   // Always ensure a minimum blur for waves
-  const effectiveBlur = Math.max(10, blurAmount);
+  const effectiveBlur = Math.max(20, blurAmount);
   
   console.log('Waves theme:', themeOverride);
   
   const waveProps = useMemo(() => {
-    return Array(4).fill().map((_, i) => ({  // Added an extra wave
+    return Array(4).fill().map((_, i) => ({
       amplitude: 20 + i * 10,
       frequency: 0.5 + i * 0.2,
       phase: i * Math.PI / 2,
       speed: (0.5 + i * 0.3) * speed,
       height: 15 + i * 10,
-      opacity: 0.5 - i * 0.1,  // Increased base opacity
+      opacity: 0.6 - i * 0.1,  // Increased opacity for better visibility
       blur: effectiveBlur
     }));
   }, [speed, effectiveBlur]);
@@ -217,10 +218,10 @@ function useSlideOrbs(slideIndex, orbCount = 12, orbSpeed = 1, themeOverride = n
   return useMemo(() => {
     const newOrbs = [];
     // Ensure minimum speed
-    const effectiveSpeed = Math.max(0.2, orbSpeed);
+    const effectiveSpeed = Math.max(0.2, orbSpeed * 1.5); // More dramatic speed scaling
     
     for (let i = 0; i < orbCount; i++) {
-      const baseDuration = 20 + i * 3; // Longer base duration for smoother movement
+      const baseDuration = 20 + i * 3;
       // A higher orbSpeed means faster movement (shorter animation duration).
       const duration = baseDuration / (effectiveSpeed);
       
@@ -229,8 +230,8 @@ function useSlideOrbs(slideIndex, orbCount = 12, orbSpeed = 1, themeOverride = n
         y: Math.random() * 100,
         z: Math.random() * 400 - 200,
         theme: themeOverride || orbColorThemes[slideIndex % orbColorThemes.length],
-        width: 250 + Math.random() * 300, // Wider range of sizes for more variety
-        height: 250 + Math.random() * 300, // Wider range of sizes for more variety
+        width: 250 + Math.random() * 300,
+        height: 250 + Math.random() * 300,
         duration
       });
     }
@@ -291,7 +292,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
       fontWeight: slide.fontWeight || 'bold',
       backgroundColor: slide.backgroundColor || 'transparent',
       useCustomBackground: slide.useCustomBackground || false,
-      transparentBackground: slide.transparentBackground || false
+      transparentBackground: slide.transparentBackground !== undefined ? slide.transparentBackground : true
     }))
   );
   const textareaRef = useRef(null);
@@ -319,7 +320,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
           fontWeight: 'bold',
           backgroundColor: 'transparent',
           useCustomBackground: false,
-          transparentBackground: false
+          transparentBackground: true
         });
       }
       setSlideStyles(newStyles);
@@ -434,7 +435,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     fontWeight: 'bold',
     backgroundColor: 'transparent',
     useCustomBackground: false,
-    transparentBackground: false
+    transparentBackground: true
   };
 
   return (
@@ -575,37 +576,36 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                         checked={currentStyle.transparentBackground}
                         onChange={(e) => handleStyleChange('transparentBackground', !currentStyle.transparentBackground)}
                         className="mr-2"
+                        disabled={true}
                       />
-                      <label htmlFor="transparentBackground" className="text-white">Transparent Background</label>
+                      <label htmlFor="transparentBackground" className="text-white opacity-50">Transparent Background (Disabled - Using Theme Colors)</label>
                     </div>
                     
-                    {!currentStyle.transparentBackground && (
-                      <div className="flex items-center mb-2">
-                        <input 
-                          type="checkbox" 
-                          id="useCustomBackground"
-                          checked={currentStyle.useCustomBackground}
-                          onChange={handleToggleCustomBackground}
-                          className="mr-2"
-                        />
-                        <label htmlFor="useCustomBackground" className="text-white">Custom Background Color</label>
-                      </div>
-                    )}
+                    <div className="flex items-center mb-2">
+                      <input 
+                        type="checkbox" 
+                        id="useCustomBackground"
+                        checked={currentStyle.useCustomBackground}
+                        onChange={handleToggleCustomBackground}
+                        className="mr-2"
+                        disabled={true}
+                      />
+                      <label htmlFor="useCustomBackground" className="text-white opacity-50">Custom Background Color (Disabled - Using Theme Colors)</label>
+                    </div>
                     
-                    {!currentStyle.transparentBackground && currentStyle.useCustomBackground && (
-                      <div>
-                        <label className="text-white block mb-1">Background Color:</label>
-                        <div className="flex items-center gap-2">
-                          <input 
-                            type="color" 
-                            value={currentStyle.backgroundColor || '#000000'} 
-                            onChange={(e) => handleStyleChange('backgroundColor', e.target.value)} 
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <span className="text-white">{currentStyle.backgroundColor}</span>
-                        </div>
+                    <div>
+                      <label className="text-white block mb-1">Slide Background (Based on Theme):</label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded cursor-pointer border border-white"
+                          style={{ backgroundColor: currentStyle.backgroundColor || '#000000' }}
+                        ></div>
+                        <span className="text-white">{currentStyle.backgroundColor || 'Theme Color'}</span>
                       </div>
-                    )}
+                      <p className="text-white text-xs mt-1 opacity-70">
+                        Each slide has a unique theme color from the selected theme palette.
+                      </p>
+                    </div>
                   </div>
                 </div>
                 
@@ -662,32 +662,38 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     { 
       text: "This just made high-end AI way more affordable for everyday users.",
       textColor: "#FFFFFF",
-      useGradient: false
+      useGradient: false,
+      transparentBackground: true
     },
     { 
       text: "Turns out, even AI fans won't pay *any* price.",
       textColor: "#FFFFFF",
-      useGradient: false
+      useGradient: false,
+      transparentBackground: true
     },
     { 
       text: "For a few bucks, you can test if this AI actually *feels* smarter.",
       textColor: "#FFFFFF",
-      useGradient: false
+      useGradient: false,
+      transparentBackground: true
     },
     { 
       text: "Like it or not, AI is already part of daily life for millions.",
       textColor: "#FFFFFF",
-      useGradient: false
+      useGradient: false,
+      transparentBackground: true
     },
     { 
       text: "Is this really an upgrade, or does Claude 3.7 win?",
       textColor: "#FFFFFF",
-      useGradient: false
+      useGradient: false,
+      transparentBackground: true
     },
     { 
       text: "Time to see what this means for real creative work.",
       textColor: "#FFFFFF",
-      useGradient: false
+      useGradient: false,
+      transparentBackground: true
     }
   ]);
   
@@ -799,12 +805,15 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     return shiftHue(baseColor, globalHueShift);
   }, [selectedTheme, globalHueShift]);
 
-  // Update slide colors when theme changes
+  // Update slide colors when theme changes - ensure each slide gets a unique color but keep transparent setting
   useEffect(() => {
     if (slidesData.length > 0) {
       setSlidesData(prevSlides => 
         prevSlides.map((slide, index) => ({
           ...slide,
+          // Keep transparentBackground true
+          transparentBackground: true,
+          useCustomBackground: false,
           backgroundColor: getSlideColor(index)
         }))
       );
@@ -1032,17 +1041,24 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     setDroppedGifs([]);
   };
 
-  // Handle saving edited slides
+  // Handle saving edited slides - preserve slide index colors and transparency
   const handleSaveSlides = (newSlides) => {
-    setSlidesData(newSlides);
+    // Apply theme colors to slides based on their index
+    const slidesWithColors = newSlides.map((slide, index) => ({
+      ...slide,
+      transparentBackground: true,
+      backgroundColor: getSlideColor(index)
+    }));
+    
+    setSlidesData(slidesWithColors);
     
     // If current slide is now out of bounds, reset to first slide
-    if (currentSlide >= newSlides.length) {
+    if (currentSlide >= slidesWithColors.length) {
       setCurrentSlide(0);
     }
     
-    // Create a named backup after editing (keeping this manual backup)
-    createBackup(newSlides, 'after-edit-' + new Date().toISOString().slice(0, 10));
+    // Create a named backup after editing
+    createBackup(slidesWithColors, 'after-edit-' + new Date().toISOString().slice(0, 10));
   };
   
   // Handle restoring slides from backup
@@ -1289,17 +1305,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                         backgroundClip: 'text'
                       } 
                     : { color: slidesData[currentSlide].textColor || '#FFFFFF' }),
-                  ...(slidesData[currentSlide].transparentBackground
-                    ? {}  // No background if transparent is enabled
-                    : slidesData[currentSlide].useCustomBackground
-                      ? { 
-                          backgroundColor: slidesData[currentSlide].backgroundColor,
-                          filter: `hue-rotate(var(--hue-shift))`
-                        }
-                      : {
-                          backgroundColor: getSlideColor(currentSlide),
-                          filter: `hue-rotate(var(--hue-shift))`
-                        })
+                  ...(slidesData[currentSlide].transparentBackground 
+                    ? {} 
+                    : { 
+                        backgroundColor: getSlideColor(currentSlide),
+                        filter: `hue-rotate(var(--hue-shift))`
+                      })
                 }}
                 whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.9))', scale: 1.05 }}
               >
