@@ -23,8 +23,6 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
   // Always ensure a minimum blur for orbs
   const effectiveBlur = Math.max(20, blurAmount);
   
-  console.log('Orbs theme:', themeOverride);
-  
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {orbs.map((orb, index) => (
@@ -71,8 +69,6 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
   // Less aggressive blur for particles so they don't disappear completely
   const effectiveBlur = Math.max(5, Math.min(blurAmount / 3, 30));
-  
-  console.log('Particles theme:', themeOverride);
   
   useEffect(() => {
     const newParticles = [];
@@ -128,8 +124,6 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
   const speed = Math.max(0.2, orbSpeed * 2); 
   // Always apply a strong blur to waves - minimum 30px
   const effectiveBlur = Math.max(30, blurAmount);
-  
-  console.log('Waves theme:', themeOverride);
   
   const waveProps = useMemo(() => {
     return Array(4).fill().map((_, i) => ({
@@ -674,6 +668,47 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
   );
 }
 
+// Create a proper error boundary as a class component
+class AnimationErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error to the console
+    console.error("Animation error:", error, errorInfo);
+  }
+
+  componentDidUpdate(prevProps) {
+    // Reset error state when currentSlide changes
+    if (prevProps.currentSlide !== this.props.currentSlide) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Fallback UI if animation fails
+      return (
+        <div className="absolute inset-0 bg-opacity-50" style={{ 
+          zIndex: 5, 
+          backgroundColor: this.props.backgroundColor
+        }}>
+          {/* Simple background with no animations */}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // -----------------------------------------------------
 // Main VerticalSlideshow Component
 // -----------------------------------------------------
@@ -968,7 +1003,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         }))
       );
     }
-  }, [selectedThemeIndex, generateRandomSlideColor, slidesData.length]);
+  }, [selectedThemeIndex, generateRandomSlideColor, slidesData, slidesData.length]);
 
   // Generate a new random color when changing slides
   useEffect(() => {
@@ -1091,8 +1126,14 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const rafId = useRef(null);
   const movementSpeed = 0.5;
 
-  // Update the text movement logic
+  // Update the text movement logic with better cleanup
   useEffect(() => {
+    // Prevent multiple animation frames
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = true;
@@ -1133,19 +1174,14 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     };
   }, [baseX, baseY, movementSpeed]);
 
-  // Add this effect for the backslash key reset
+  // Fix the E key glow effect with proper cleanup
   useEffect(() => {
-    const handleResetKey = (e) => {
-      if (e.key === "\\") resetTextPosition();
-    };
-    window.addEventListener('keydown', handleResetKey);
-    return () => window.removeEventListener('keydown', handleResetKey);
-  }, [resetTextPosition]);
-
-  // Update just the E key glow effect
-  useEffect(() => {
+    let isActive = true; // Flag to prevent stale animations
+    
     const handleKeyDown = (e) => {
-      if (e.key.toLowerCase() === 'e') {
+      if (e.key.toLowerCase() === 'e' && isActive) {
+        // Cancel any previous animations to prevent queuing
+        textControls.stop();
         textControls.start({
           filter: [
             "drop-shadow(0 0 0px rgba(255,255,255,0))",
@@ -1162,8 +1198,23 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      isActive = false; // Prevent animations after unmount
+      window.removeEventListener('keydown', handleKeyDown);
+      // Clean up any hanging animations
+      textControls.stop();
+    };
   }, [textControls]);
+
+  // Add back the backslash key reset effect
+  useEffect(() => {
+    const handleResetKey = (e) => {
+      if (e.key === "\\") resetTextPosition();
+    };
+    window.addEventListener('keydown', handleResetKey);
+    return () => window.removeEventListener('keydown', handleResetKey);
+  }, [resetTextPosition]);
 
   // Slide navigation.
   const handleNext = () =>
@@ -1404,31 +1455,33 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         
         {/* Animation layer - above background (z-index: 5), below content */}
         <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
-          {/* Render the appropriate background animation */}
-          {backgroundAnimationType === 'orbs' && (
-            <MemoizedOrbsContainer 
-              slideIndex={currentSlide} 
-              orbSpeed={orbSpeed} 
-              themeOverride={selectedTheme.orbTheme} 
-              blurAmount={blurAmount}
-            />
-          )}
-          {backgroundAnimationType === 'particles' && (
-            <MemoizedParticlesContainer 
-              slideIndex={currentSlide} 
-              orbSpeed={orbSpeed} 
-              themeOverride={selectedTheme.orbTheme} 
-              blurAmount={blurAmount}
-            />
-          )}
-          {backgroundAnimationType === 'waves' && (
-            <MemoizedWavesContainer 
-              slideIndex={currentSlide} 
-              orbSpeed={orbSpeed} 
-              themeOverride={selectedTheme.orbTheme} 
-              blurAmount={blurAmount}
-            />
-          )}
+          {/* Render the appropriate background animation with error boundary */}
+          <AnimationErrorBoundary currentSlide={currentSlide} backgroundColor={selectedTheme.value}>
+            {backgroundAnimationType === 'orbs' && (
+              <MemoizedOrbsContainer 
+                slideIndex={currentSlide} 
+                orbSpeed={orbSpeed} 
+                themeOverride={selectedTheme.orbTheme} 
+                blurAmount={blurAmount}
+              />
+            )}
+            {backgroundAnimationType === 'particles' && (
+              <MemoizedParticlesContainer 
+                slideIndex={currentSlide} 
+                orbSpeed={orbSpeed} 
+                themeOverride={selectedTheme.orbTheme} 
+                blurAmount={blurAmount}
+              />
+            )}
+            {backgroundAnimationType === 'waves' && (
+              <MemoizedWavesContainer 
+                slideIndex={currentSlide} 
+                orbSpeed={orbSpeed} 
+                themeOverride={selectedTheme.orbTheme} 
+                blurAmount={blurAmount}
+              />
+            )}
+          </AnimationErrorBoundary>
         </div>
         
         {/* Website title - z-index: 20 */}
