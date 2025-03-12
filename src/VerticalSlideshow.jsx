@@ -359,9 +359,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Global color theme control - hue shift value (0-360)
   const [globalHueShift, setGlobalHueShift] = useState(0);
   
-  // Store randomly generated slide colors
-  const [slideColorMap, setSlideColorMap] = useState({});
-
   // Additional customization: Background theme and orb speed.
   const backgroundThemes = useMemo(() => [
     { 
@@ -410,18 +407,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     return colors[slideIndex % colors.length];
   }, [backgroundThemes]);
   
-  // Function to apply global text color to all slides
-  const applyGlobalTextColor = (color) => {
-    setGlobalTextColor(color);
-    setSlidesData(prevSlides => 
-      prevSlides.map(slide => ({
-        ...slide,
-        textColor: color,
-        useGradient: false // Disable gradient when applying global color
-      }))
-    );
-  };
-  
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
@@ -461,81 +446,57 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const selectedTheme = useMemo(() => 
     backgroundThemes[selectedThemeIndex], [backgroundThemes, selectedThemeIndex]);
 
-  // Get or generate a slide color based on index
-  const getSlideColor = useCallback((index) => {
-    const colorKey = `${selectedThemeIndex}-${index}`;
-    
-    // If we don't have a color for this combination yet, generate one
-    if (!slideColorMap[colorKey]) {
-      const newColor = generateRandomSlideColor(selectedThemeIndex, index);
-      
-      // Update the color map
-      setSlideColorMap(prev => ({
-        ...prev,
-        [colorKey]: newColor
-      }));
-      
-      return shiftHue(newColor, globalHueShift);
-    }
-    
-    // Return the existing color with hue shift applied
-    return shiftHue(slideColorMap[colorKey], globalHueShift);
-  }, [selectedThemeIndex, globalHueShift, slideColorMap, generateRandomSlideColor]);
+  // Store slide colors in a simpler way
+  const [slideBackgroundColor, setSlideBackgroundColor] = useState(null);
 
-  // Generate a new random color for EACH slide when changing themes
+  // Use a simpler color approach without the complex mapping and lookups
+  // Set color directly when theme or slide changes
   useEffect(() => {
-    // Clear the color map to force new colors when theme changes
-    setSlideColorMap({});
-    
-    // Generate new colors for ALL slides
-    if (slidesData.length > 0) {
-      const newColorMap = {};
-      
-      // Pre-generate all colors
-      slidesData.forEach((_, index) => {
-        const colorKey = `${selectedThemeIndex}-${index}`;
-        newColorMap[colorKey] = generateRandomSlideColor(selectedThemeIndex, index);
-      });
-      
-      // Set all colors at once
-      setSlideColorMap(newColorMap);
-      
-      // Update all slides with their new colors
-      setSlidesData(prevSlides => 
-        prevSlides.map((slide, index) => ({
-          ...slide,
-          transparentBackground: true,
-          useCustomBackground: false,
-          backgroundColor: newColorMap[`${selectedThemeIndex}-${index}`]
-        }))
-      );
+    if (backgroundThemes[selectedThemeIndex] && backgroundThemes[selectedThemeIndex].slideColors) {
+      const colors = backgroundThemes[selectedThemeIndex].slideColors;
+      const color = colors[currentSlide % colors.length];
+      setSlideBackgroundColor(shiftHue(color, globalHueShift));
     }
-  }, [selectedThemeIndex, generateRandomSlideColor, slidesData, slidesData.length]);
+  }, [currentSlide, selectedThemeIndex, globalHueShift, backgroundThemes]);
 
-  // Generate a new random color when changing slides
+  // Cleanup animation resources on unmount and when changing slides
+  // Single cleanupAnimations effect to prevent animation leaks
   useEffect(() => {
-    // Generate a new color for the current slide
-    const newColor = generateRandomSlideColor(selectedThemeIndex, currentSlide);
-    const colorKey = `${selectedThemeIndex}-${currentSlide}`;
+    // Create references to animation-related resources
+    const refs = {
+      textControls,
+      baseX,
+      baseY,
+      raf: rafId.current,
+      lastTime: lastTimeRef.current,
+      keysState: keysPressed.current
+    };
     
-    // Update the color map
-    setSlideColorMap(prev => ({
-      ...prev,
-      [colorKey]: newColor
-    }));
+    // Reset all animations when slide changes
+    textControls.set({
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      filter: "drop-shadow(0 0 25px rgba(255,255,255,0.5))"
+    });
     
-    // Update the slide's background color
-    setSlidesData(prevSlides => 
-      prevSlides.map((slide, index) => 
-        index === currentSlide 
-          ? {
-              ...slide,
-              backgroundColor: newColor
-            }
-          : slide
-      )
-    );
-  }, [currentSlide, selectedThemeIndex, generateRandomSlideColor]);
+    // Return cleanup function
+    return () => {
+      // Cancel any outstanding animation frames
+      if (refs.raf) {
+        cancelAnimationFrame(refs.raf);
+      }
+      
+      // Stop any active animations
+      if (refs.textControls) {
+        refs.textControls.stop();
+      }
+      
+      // Reset animation states
+      refs.lastTime = null;
+      refs.keysState = { w: false, a: false, s: false, d: false };
+    };
+  }, [currentSlide, textControls, baseX, baseY]);
 
   // CSS Variables for theme colors
   useEffect(() => {
@@ -792,14 +753,13 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     createBackup(newSlides, 'after-edit-' + new Date().toISOString().slice(0, 10));
   };
   
-  // Handle restoring slides from backup - simplified
+  // Simplified backup restore
   const handleRestoreBackup = (restoredSlides) => {
-    // Convert complex objects back to simple strings if needed
-    const formattedSlides = restoredSlides.map(slide => 
-      typeof slide === 'string' 
-        ? slide
-        : slide.text || JSON.stringify(slide)
-    );
+    // Always ensure we have an array of strings
+    const formattedSlides = Array.isArray(restoredSlides) ? 
+      restoredSlides.map(slide => typeof slide === 'string' ? slide : 
+        (slide && slide.text) ? slide.text : String(slide)
+      ) : [];
     
     setSlidesData(formattedSlides);
     
