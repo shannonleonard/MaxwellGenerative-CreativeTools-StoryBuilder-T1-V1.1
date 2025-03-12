@@ -69,8 +69,8 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
 function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const [particles, setParticles] = useState([]);
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
-  // Always ensure a minimum blur for particles
-  const effectiveBlur = Math.max(15, blurAmount / 2);
+  // Less aggressive blur for particles so they don't disappear completely
+  const effectiveBlur = Math.max(5, Math.min(blurAmount / 3, 30));
   
   console.log('Particles theme:', themeOverride);
   
@@ -82,8 +82,9 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: 5 + Math.random() * 15,  // Larger particles for better visibility
-        duration: (3 + Math.random() * 7) / (Math.max(0.5, orbSpeed * 1.5 || 1)), // Make more responsive to speed
+        size: 10 + Math.random() * 25,  // Much larger particles for better visibility
+        // Make speed directly proportional to orbSpeed - more intuitive behavior
+        duration: (5 + Math.random() * 5) / (Math.max(0.2, orbSpeed * 2)),
       });
     }
     setParticles(newParticles);
@@ -123,8 +124,9 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
 
 function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
-  const speed = Math.max(0.3, orbSpeed * 1.5 || 1); // Make more responsive to speed
-  // Always ensure a minimum blur for waves
+  // Make speed directly proportional to orbSpeed for more intuitive control
+  const speed = Math.max(0.2, orbSpeed * 2); 
+  // Ensure wave blur is always visible but scales with slider
   const effectiveBlur = Math.max(20, blurAmount);
   
   console.log('Waves theme:', themeOverride);
@@ -134,6 +136,7 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
       amplitude: 20 + i * 10,
       frequency: 0.5 + i * 0.2,
       phase: i * Math.PI / 2,
+      // Direct connection between speed slider and wave speed
       speed: (0.5 + i * 0.3) * speed,
       height: 15 + i * 10,
       opacity: 0.6 - i * 0.1,  // Increased opacity for better visibility
@@ -217,13 +220,13 @@ const backgroundAnimations = [
 function useSlideOrbs(slideIndex, orbCount = 12, orbSpeed = 1, themeOverride = null) {
   return useMemo(() => {
     const newOrbs = [];
-    // Ensure minimum speed
-    const effectiveSpeed = Math.max(0.2, orbSpeed * 1.5); // More dramatic speed scaling
+    // More direct relationship between speed slider and actual speed
+    const effectiveSpeed = orbSpeed * 2; 
     
     for (let i = 0; i < orbCount; i++) {
       const baseDuration = 20 + i * 3;
-      // A higher orbSpeed means faster movement (shorter animation duration).
-      const duration = baseDuration / (effectiveSpeed);
+      // Direct relationship between slider and duration
+      const duration = baseDuration / effectiveSpeed;
       
       newOrbs.push({
         x: Math.random() * 100,
@@ -488,7 +491,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                           ? currentStyle.backgroundColor 
                           : 'rgba(17, 24, 39, 1)',
                       backgroundImage: currentStyle.transparentBackground 
-                        ? 'linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444), linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444)'
+                        ? 'linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444), linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444)'
                         : 'none',
                       backgroundSize: '20px 20px',
                       backgroundPosition: '0 0, 10px 10px',
@@ -703,6 +706,106 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Global color theme control - hue shift value (0-360)
   const [globalHueShift, setGlobalHueShift] = useState(0);
   
+  // Store randomly generated slide colors
+  const [slideColorMap, setSlideColorMap] = useState({});
+
+  // Function to generate a new random color that complements the theme
+  const generateRandomSlideColor = useCallback((themeIndex, slideIndex) => {
+    const theme = backgroundThemes[themeIndex];
+    const baseColors = theme.slideColors;
+    
+    // Generate a random color by modifying the base color from the theme
+    const baseColor = baseColors[slideIndex % baseColors.length];
+    
+    // Convert hex to RGB
+    const r = parseInt(baseColor.slice(1, 3), 16);
+    const g = parseInt(baseColor.slice(3, 5), 16);
+    const b = parseInt(baseColor.slice(5, 7), 16);
+    
+    // Create variation while keeping it dark enough for white text
+    // Randomly shift hue while maintaining darkness
+    const hueShift = Math.floor(Math.random() * 60) - 30; // -30 to +30 degrees
+    const satShift = Math.random() * 0.2 - 0.1; // -10% to +10%
+    
+    // Convert to HSL to manipulate
+    let [h, s, l] = rgbToHsl(r, g, b);
+    
+    // Shift hue
+    h = (h + hueShift + 360) % 360;
+    
+    // Adjust saturation slightly, keeping it bounded
+    s = Math.max(0.2, Math.min(0.9, s + satShift));
+    
+    // Keep lightness low for good contrast with white text
+    l = Math.max(0.1, Math.min(0.35, l + (Math.random() * 0.1 - 0.05)));
+    
+    // Convert back to RGB then hex
+    const newColor = hslToHex(h, s, l);
+    return newColor;
+  }, []);
+  
+  // Function to convert RGB to HSL
+  const rgbToHsl = (r, g, b) => {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    
+    if (max === min) {
+      h = s = 0; // achromatic
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+        default: break;
+      }
+      
+      h /= 6;
+    }
+    
+    return [h * 360, s, l];
+  };
+  
+  // Function to convert HSL to Hex
+  const hslToHex = (h, s, l) => {
+    h /= 360;
+    let r, g, b;
+    
+    if (s === 0) {
+      r = g = b = l; // achromatic
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    
+    const toHex = x => {
+      const hex = Math.round(x * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+    
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+  
   // Function to apply global text color to all slides
   const applyGlobalTextColor = (color) => {
     setGlobalTextColor(color);
@@ -798,27 +901,69 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const selectedTheme = useMemo(() => 
     backgroundThemes[selectedThemeIndex], [backgroundThemes, selectedThemeIndex]);
 
-  // Get the slide color based on index and apply the hue shift
+  // Get or generate a slide color based on index
   const getSlideColor = useCallback((index) => {
-    const colors = selectedTheme.slideColors;
-    const baseColor = colors[index % colors.length];
-    return shiftHue(baseColor, globalHueShift);
-  }, [selectedTheme, globalHueShift]);
+    const colorKey = `${selectedThemeIndex}-${index}`;
+    
+    // If we don't have a color for this combination yet, generate one
+    if (!slideColorMap[colorKey]) {
+      const newColor = generateRandomSlideColor(selectedThemeIndex, index);
+      
+      // Update the color map
+      setSlideColorMap(prev => ({
+        ...prev,
+        [colorKey]: newColor
+      }));
+      
+      return shiftHue(newColor, globalHueShift);
+    }
+    
+    // Return the existing color with hue shift applied
+    return shiftHue(slideColorMap[colorKey], globalHueShift);
+  }, [selectedThemeIndex, globalHueShift, slideColorMap, generateRandomSlideColor]);
 
-  // Update slide colors when theme changes - ensure each slide gets a unique color but keep transparent setting
+  // Generate new random colors when theme changes
   useEffect(() => {
+    // Clear the color map to force new colors when theme changes
+    setSlideColorMap({});
+    
+    // Update slide colors
     if (slidesData.length > 0) {
       setSlidesData(prevSlides => 
         prevSlides.map((slide, index) => ({
           ...slide,
-          // Keep transparentBackground true
           transparentBackground: true,
           useCustomBackground: false,
           backgroundColor: getSlideColor(index)
         }))
       );
     }
-  }, [selectedThemeIndex, globalHueShift, getSlideColor, slidesData.length]);
+  }, [selectedThemeIndex, getSlideColor, slidesData.length]);
+
+  // Generate a new random color when changing slides
+  useEffect(() => {
+    // Generate a new color for the current slide
+    const newColor = generateRandomSlideColor(selectedThemeIndex, currentSlide);
+    const colorKey = `${selectedThemeIndex}-${currentSlide}`;
+    
+    // Update the color map
+    setSlideColorMap(prev => ({
+      ...prev,
+      [colorKey]: newColor
+    }));
+    
+    // Update the slide's background color
+    setSlidesData(prevSlides => 
+      prevSlides.map((slide, index) => 
+        index === currentSlide 
+          ? {
+              ...slide,
+              backgroundColor: newColor
+            }
+          : slide
+      )
+    );
+  }, [currentSlide, selectedThemeIndex, generateRandomSlideColor]);
 
   // CSS Variables for theme colors
   useEffect(() => {
@@ -1169,8 +1314,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <input
               type="range"
               min="0.2"
-              max="3"
-              step="0.1"
+              max="4"
+              step="0.2"
               value={orbSpeed}
               onChange={(e) => setOrbSpeed(Number(e.target.value))}
               className="cursor-pointer"
@@ -1182,8 +1327,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <input
               type="range"
               min="0"
-              max="200"
-              step="10"
+              max="100"
+              step="5"
               value={blurAmount}
               onChange={(e) => setBlurAmount(Number(e.target.value))}
               className="cursor-pointer"
