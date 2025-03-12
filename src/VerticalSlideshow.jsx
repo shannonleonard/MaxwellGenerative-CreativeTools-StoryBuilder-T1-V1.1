@@ -23,6 +23,8 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
   // Always ensure a minimum blur for orbs
   const effectiveBlur = Math.max(20, blurAmount);
   
+  console.log('Orbs theme:', themeOverride);
+  
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {orbs.map((orb, index) => (
@@ -69,6 +71,8 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
   // Always ensure a minimum blur for particles
   const effectiveBlur = Math.max(5, blurAmount / 3);
+  
+  console.log('Particles theme:', themeOverride);
   
   useEffect(() => {
     const newParticles = [];
@@ -121,6 +125,8 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
   const speed = Math.max(0.3, orbSpeed || 1);
   // Always ensure a minimum blur for waves
   const effectiveBlur = Math.max(10, blurAmount);
+  
+  console.log('Waves theme:', themeOverride);
   
   const waveProps = useMemo(() => {
     return Array(4).fill().map((_, i) => ({  // Added an extra wave
@@ -567,7 +573,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                         type="checkbox" 
                         id="transparentBackground"
                         checked={currentStyle.transparentBackground}
-                        onChange={() => handleStyleChange('transparentBackground', !currentStyle.transparentBackground)}
+                        onChange={(e) => handleStyleChange('transparentBackground', !currentStyle.transparentBackground)}
                         className="mr-2"
                       />
                       <label htmlFor="transparentBackground" className="text-white">Transparent Background</label>
@@ -1215,7 +1221,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <MemoizedParticlesContainer 
               slideIndex={currentSlide} 
               orbSpeed={orbSpeed} 
-              themeOverride={selectedTheme.particleColor} 
+              themeOverride={selectedTheme.orbTheme} 
               blurAmount={blurAmount}
             />
           )}
@@ -1223,7 +1229,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <MemoizedWavesContainer 
               slideIndex={currentSlide} 
               orbSpeed={orbSpeed} 
-              themeOverride={selectedTheme.waveColor} 
+              themeOverride={selectedTheme.orbTheme} 
               blurAmount={blurAmount}
             />
           )}
@@ -1273,7 +1279,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                   scale: { duration: 0.2, ease: "backInOut" },
                   filter: { duration: 0.6, times: [0, 0.3, 1], ease: "easeInOut" }
                 }}
-                className={`text-left max-w-2xl p-8 ${slidesData[currentSlide].fontWeight || 'font-bold'} text-4xl leading-relaxed rounded-lg`}
+                className={`text-left max-w-2xl p-8 text-4xl leading-relaxed rounded-lg font-${slidesData[currentSlide].fontWeight || 'bold'}`}
                 style={{
                   ...(slidesData[currentSlide].useGradient 
                     ? { 
