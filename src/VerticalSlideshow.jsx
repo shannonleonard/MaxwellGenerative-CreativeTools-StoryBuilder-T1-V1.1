@@ -425,8 +425,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const textControls = useAnimation();
   const baseX = useMotionValue(0);
   const baseY = useMotionValue(0);
-  const springX = useSpring(baseX, { stiffness: 300, damping: 20 });
-  const springY = useSpring(baseY, { stiffness: 300, damping: 20 });
+  const springX = useSpring(baseX, { stiffness: 120, damping: 30, mass: 1.2 });
+  const springY = useSpring(baseY, { stiffness: 120, damping: 30, mass: 1.2 });
   const keysPressed = useRef({ w: false, a: false, s: false, d: false });
   const lastTimeRef = useRef(null);
   const rafId = useRef(null);
@@ -598,8 +598,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
 
   // Fix the WASD movement with a more persistent implementation
   useEffect(() => {
-    // Use a higher movement speed for better responsiveness
-    const movementSpeed = 3.0;
+    // Reduce movement speed for buttery smooth control
+    const movementSpeed = 0.8; // Reduced from 3.0 for more precise control
     
     // Create better key handlers that won't interfere with other components
     function handleKeyDown(e) {
@@ -623,14 +623,17 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       }
     }
 
-    // More robust animation function with error handling
+    // More robust animation function with smooth movement
     function animate(time) {
       try {
         if (!lastTimeRef.current) lastTimeRef.current = time;
         const delta = Math.min(time - lastTimeRef.current, 100); // Cap delta to prevent jumps
         lastTimeRef.current = time;
+        
+        // Apply smaller incremental movements for smoother control
         const movement = movementSpeed * delta;
 
+        // Apply gradual movement rather than abrupt changes
         if (keysPressed.current.w) baseY.set(baseY.get() - movement);
         if (keysPressed.current.s) baseY.set(baseY.get() + movement);
         if (keysPressed.current.a) baseX.set(baseX.get() - movement);
