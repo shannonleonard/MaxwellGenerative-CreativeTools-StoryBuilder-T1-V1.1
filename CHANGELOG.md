@@ -1,3 +1,9 @@
+## [1.1.2] - 2025-03-12
+
+### Enhanced
+- Further improved versioning system
+- Updated documentation
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
