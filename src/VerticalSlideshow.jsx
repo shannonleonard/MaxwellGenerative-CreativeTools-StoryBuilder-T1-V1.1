@@ -47,7 +47,7 @@ function useSlideOrbs(slideIndex, orbCount = 8, orbSpeed = 1, themeOverride = nu
   }, [slideIndex, orbCount, orbSpeed, themeOverride]);
 }
 
-function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null }) {
+function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 90 }) {
   const orbs = useSlideOrbs(slideIndex, 8, orbSpeed, themeOverride);
   return (
     <AnimatePresence mode="wait">
@@ -63,11 +63,12 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null }) {
         {orbs.map((orb, i) => (
           <motion.div
             key={i}
-            className={`absolute rounded-full bg-gradient-to-r ${orb.theme} opacity-40 blur-[90px]`}
+            className={`absolute rounded-full bg-gradient-to-r ${orb.theme} opacity-40`}
             style={{
               transformStyle: 'preserve-3d',
               width: orb.width,
               height: orb.height,
+              filter: `blur(${blurAmount}px)`
             }}
             initial={{
               x: `${orb.x}%`,
@@ -95,7 +96,7 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null }) {
 }
 
 // Particles background animation
-function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
+function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const theme = themeOverride || 
     orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
   
@@ -124,7 +125,8 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
             height: particle.size,
             x: `${particle.x}%`,
             y: `${particle.y}%`,
-            opacity: 0.7
+            opacity: 0.7,
+            filter: blurAmount > 0 ? `blur(${blurAmount/3}px)` : 'none'
           }}
           animate={{
             x: [`${particle.x}%`, `${(particle.x + 20) % 100}%`, `${(particle.x - 20 + 100) % 100}%`, `${particle.x}%`],
@@ -143,7 +145,7 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
 }
 
 // Wave effect background
-function WavesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
+function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const theme = themeOverride || 
     orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
   
@@ -165,7 +167,8 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null }) {
               right: 0,
               backgroundColor: `var(--${theme})`,
               height: `${25 + (orbSpeed * 5)}%`,
-              opacity: 0.2
+              opacity: 0.2,
+              filter: blurAmount > 0 ? `blur(${blurAmount/2}px)` : 'none'
             }}
             initial={{ y: '100%' }}
             animate={{
@@ -682,6 +685,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [orbSpeed, setOrbSpeed] = useState(1);
   const [backgroundAnimationType, setBackgroundAnimationType] = useState('orbs');
+  const [blurAmount, setBlurAmount] = useState(90); // Default blur amount in pixels
 
   // For performance and to avoid recreating these objects
   const selectedTheme = useMemo(() => 
@@ -1023,6 +1027,19 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             />
             <span className="text-white ml-1">{orbSpeed.toFixed(1)}x</span>
           </div>
+          <div>
+            <label className="text-white font-bold mr-2">Background Blur:</label>
+            <input
+              type="range"
+              min="0"
+              max="150"
+              step="5"
+              value={blurAmount}
+              onChange={(e) => setBlurAmount(Number(e.target.value))}
+              className="cursor-pointer"
+            />
+            <span className="text-white ml-1">{blurAmount}px</span>
+          </div>
         </div>
       </div>
 
@@ -1038,6 +1055,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             slideIndex={currentSlide} 
             orbSpeed={orbSpeed} 
             themeOverride={selectedTheme.orbTheme} 
+            blurAmount={blurAmount}
           />
         )}
         {backgroundAnimationType === 'particles' && (
@@ -1045,6 +1063,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             slideIndex={currentSlide} 
             orbSpeed={orbSpeed} 
             themeOverride={selectedTheme.particleColor} 
+            blurAmount={blurAmount}
           />
         )}
         {backgroundAnimationType === 'waves' && (
@@ -1052,6 +1071,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             slideIndex={currentSlide} 
             orbSpeed={orbSpeed} 
             themeOverride={selectedTheme.waveColor} 
+            blurAmount={blurAmount}
           />
         )}
         
