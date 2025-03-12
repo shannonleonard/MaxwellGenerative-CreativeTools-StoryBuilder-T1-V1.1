@@ -19,20 +19,23 @@ const orbColorThemes = [
 
 // Define the components first before using them
 function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 90 }) {
-  const orbs = useSlideOrbs(slideIndex, 8, orbSpeed, themeOverride);
+  const orbs = useSlideOrbs(slideIndex, 12, orbSpeed, themeOverride);
+  // Always ensure a minimum blur for orbs
+  const effectiveBlur = Math.max(20, blurAmount);
   
   return (
-    <div className="absolute inset-0 overflow-hidden z-0">
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {orbs.map((orb, index) => (
         <motion.div
           key={`orb-${index}`}
-          className={`absolute rounded-full bg-gradient-to-br ${orb.theme} opacity-70 blur-[${blurAmount}px]`}
+          className={`absolute rounded-full bg-gradient-to-br ${orb.theme} opacity-80`}
           style={{
             width: orb.width,
             height: orb.height,
             x: `${orb.x}%`,
             y: `${orb.y}%`,
-            zIndex: 1
+            filter: `blur(${effectiveBlur}px) hue-rotate(var(--hue-shift))`,
+            zIndex: 5
           }}
           animate={{
             x: [
@@ -47,11 +50,13 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
               `${(orb.y + 10) % 100}%`,
               `${orb.y}%`
             ],
+            scale: [1, 1.05, 0.95, 1]
           }}
           transition={{
             duration: orb.duration,
             ease: "easeInOut",
             repeat: Infinity,
+            repeatType: "reverse"
           }}
         />
       ))}
@@ -62,6 +67,8 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
 function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const [particles, setParticles] = useState([]);
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
+  // Always ensure a minimum blur for particles
+  const effectiveBlur = Math.max(5, blurAmount / 3);
   
   useEffect(() => {
     const newParticles = [];
@@ -78,17 +85,18 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
   }, [slideIndex, orbSpeed, themeOverride]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden z-0">
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {particles.map((particle) => (
         <motion.div
           key={`particle-${particle.id}`}
-          className={`absolute rounded-full bg-gradient-to-br ${theme} blur-[${blurAmount}px]`}
+          className={`absolute rounded-full bg-gradient-to-br ${theme}`}
           style={{
             width: `${particle.size}px`,
             height: `${particle.size}px`,
             left: `${particle.x}%`,
             top: `${particle.y}%`,
-            zIndex: 1
+            filter: `blur(${effectiveBlur}px) hue-rotate(var(--hue-shift))`,
+            zIndex: 5
           }}
           animate={{
             x: [0, Math.random() * 100 - 50, Math.random() * 100 - 50, 0],
@@ -111,6 +119,8 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
 function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
   const speed = Math.max(0.3, orbSpeed || 1);
+  // Always ensure a minimum blur for waves
+  const effectiveBlur = Math.max(10, blurAmount);
   
   const waveProps = useMemo(() => {
     return Array(4).fill().map((_, i) => ({  // Added an extra wave
@@ -119,17 +129,18 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
       phase: i * Math.PI / 2,
       speed: (0.5 + i * 0.3) * speed,
       height: 15 + i * 10,
-      opacity: 0.5 - i * 0.1  // Increased base opacity
+      opacity: 0.5 - i * 0.1,  // Increased base opacity
+      blur: effectiveBlur
     }));
-  }, [speed]);
+  }, [speed, effectiveBlur]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden z-0">
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       {waveProps.map((wave, i) => (
         <WaveComponent 
           key={i}
           theme={theme}
-          blurAmount={blurAmount}
+          blurAmount={wave.blur}
           {...wave}
         />
       ))}
@@ -164,10 +175,14 @@ function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, th
   }, [amplitude, frequency, phase]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden z-0">
+    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
       <motion.div
-        className={`absolute w-[200%] h-full bg-gradient-to-r ${theme} blur-[${blurAmount}px]`}
-        style={{ clipPath: `polygon(${wavePoints})`, zIndex: 1 }}
+        className={`absolute w-[200%] h-full bg-gradient-to-r ${theme}`}
+        style={{ 
+          clipPath: `polygon(${wavePoints})`, 
+          filter: `blur(${blurAmount}px) hue-rotate(var(--hue-shift))`,
+          zIndex: 5
+        }}
         animate={animationControls}
       >
         <div 
@@ -199,16 +214,17 @@ function useSlideOrbs(slideIndex, orbCount = 12, orbSpeed = 1, themeOverride = n
     const effectiveSpeed = Math.max(0.2, orbSpeed);
     
     for (let i = 0; i < orbCount; i++) {
-      const baseDuration = 15 + i * 2.5; // Slightly shorter base duration
+      const baseDuration = 20 + i * 3; // Longer base duration for smoother movement
       // A higher orbSpeed means faster movement (shorter animation duration).
-      const duration = baseDuration / (effectiveSpeed * 1.5);
+      const duration = baseDuration / (effectiveSpeed);
+      
       newOrbs.push({
         x: Math.random() * 100,
         y: Math.random() * 100,
         z: Math.random() * 400 - 200,
         theme: themeOverride || orbColorThemes[slideIndex % orbColorThemes.length],
-        width: 250 + Math.random() * 250, // Wider range of sizes
-        height: 250 + Math.random() * 250, // Wider range of sizes
+        width: 250 + Math.random() * 300, // Wider range of sizes for more variety
+        height: 250 + Math.random() * 300, // Wider range of sizes for more variety
         duration
       });
     }
@@ -645,6 +661,9 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Global text color
   const [globalTextColor, setGlobalTextColor] = useState("#FFFFFF");
   
+  // Global color theme control - hue shift value (0-360)
+  const [globalHueShift, setGlobalHueShift] = useState(0);
+  
   // Function to apply global text color to all slides
   const applyGlobalTextColor = (color) => {
     setGlobalTextColor(color);
@@ -680,6 +699,13 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const containerRef = useRef(null);
   const [newGifLink, setNewGifLink] = useState("");
 
+  // Function to generate a color with a shifted hue
+  const shiftHue = (baseColor, shift) => {
+    // Simple CSS variable to adjust on the fly
+    document.documentElement.style.setProperty('--hue-shift', `${shift}deg`);
+    return baseColor;
+  };
+
   // Additional customization: Background theme and orb speed.
   const backgroundThemes = useMemo(() => [
     { 
@@ -687,46 +713,70 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       value: "#0A2472", // Darker blue for better contrast with white
       orbTheme: "from-blue-600 to-indigo-800",
       particleColor: "blue-700",
-      waveColor: "blue-800"
+      waveColor: "blue-800",
+      slideColors: ["#0A2472", "#123388", "#1E40AF", "#1D4ED8", "#2563EB", "#3B82F6"]
     },
     { 
       name: "Royal Purple", 
       value: "#3C096C", // Deep purple for high contrast
       orbTheme: "from-purple-600 to-violet-900",
       particleColor: "purple-700",
-      waveColor: "purple-800"
+      waveColor: "purple-800",
+      slideColors: ["#3C096C", "#4C1D95", "#5B21B6", "#6D28D9", "#7E22CE", "#8B5CF6"]
     },
     { 
       name: "Forest Green", 
       value: "#184E1C", // Dark green for readability
       orbTheme: "from-green-700 to-teal-900",
       particleColor: "green-800",
-      waveColor: "green-900"
+      waveColor: "green-900",
+      slideColors: ["#184E1C", "#166534", "#15803D", "#16A34A", "#22C55E", "#4ADE80"]
     },
     { 
       name: "Deep Crimson", 
       value: "#630A10", // Dark red for contrast
       orbTheme: "from-red-700 to-rose-900",
       particleColor: "red-800",
-      waveColor: "red-900"
+      waveColor: "red-900",
+      slideColors: ["#630A10", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626", "#EF4444"]
     },
     { 
       name: "Amber Gold", 
       value: "#7A4100", // Dark amber/brown for contrast with white
       orbTheme: "from-yellow-600 to-amber-900",
       particleColor: "amber-700",
-      waveColor: "amber-800"
+      waveColor: "amber-800",
+      slideColors: ["#7A4100", "#92400E", "#A16207", "#B45309", "#D97706", "#F59E0B"]
     }
   ], []);
   
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [orbSpeed, setOrbSpeed] = useState(1);
   const [backgroundAnimationType, setBackgroundAnimationType] = useState('orbs');
-  const [blurAmount, setBlurAmount] = useState(90); // Default blur amount in pixels
+  const [blurAmount, setBlurAmount] = useState(50); // Default blur amount in pixels
 
   // For performance and to avoid recreating these objects
   const selectedTheme = useMemo(() => 
     backgroundThemes[selectedThemeIndex], [backgroundThemes, selectedThemeIndex]);
+
+  // Get the slide color based on index and apply the hue shift
+  const getSlideColor = useCallback((index) => {
+    const colors = selectedTheme.slideColors;
+    const baseColor = colors[index % colors.length];
+    return shiftHue(baseColor, globalHueShift);
+  }, [selectedTheme, globalHueShift]);
+
+  // Update slide colors when theme changes
+  useEffect(() => {
+    if (slidesData.length > 0) {
+      setSlidesData(prevSlides => 
+        prevSlides.map((slide, index) => ({
+          ...slide,
+          backgroundColor: getSlideColor(index)
+        }))
+      );
+    }
+  }, [selectedThemeIndex, globalHueShift, getSlideColor]);
 
   // CSS Variables for theme colors
   useEffect(() => {
@@ -783,7 +833,10 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     document.documentElement.style.setProperty('--lime-500', '#84cc16');
     
     document.documentElement.style.setProperty('--emerald-500', '#10b981');
-  }, []);
+    
+    // Set the initial hue-shift variable
+    document.documentElement.style.setProperty('--hue-shift', `${globalHueShift}deg`);
+  }, [globalHueShift]);
 
   // Animation controls for the slide text
   const textControls = useAnimation();
@@ -1040,6 +1093,19 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             </select>
           </div>
           <div>
+            <label className="text-white font-bold mr-2">Color Shift:</label>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              step="5"
+              value={globalHueShift}
+              onChange={(e) => setGlobalHueShift(Number(e.target.value))}
+              className="cursor-pointer"
+            />
+            <span className="text-white ml-1">{globalHueShift}°</span>
+          </div>
+          <div>
             <label className="text-white font-bold mr-2">Background Animation:</label>
             <select
               value={backgroundAnimationType}
@@ -1065,12 +1131,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <span className="text-white ml-1">{orbSpeed.toFixed(1)}x</span>
           </div>
           <div>
-            <label className="text-white font-bold mr-2">Background Blur:</label>
+            <label className="text-white font-bold mr-2">Animation Blur:</label>
             <input
               type="range"
               min="0"
-              max="150"
-              step="5"
+              max="200"
+              step="10"
               value={blurAmount}
               onChange={(e) => setBlurAmount(Number(e.target.value))}
               className="cursor-pointer"
@@ -1099,11 +1165,18 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         className="relative aspect-[9/16] w-full max-w-xl overflow-hidden rounded-3xl shadow-xl flex flex-col p-4"
         style={{ backgroundColor: selectedTheme.value, position: 'relative' }}
       >
-        {/* Background layer */}
-        <div className="absolute inset-0 z-0" style={{ backgroundColor: selectedTheme.value }}></div>
+        {/* Background layer - z-index: 1 */}
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            backgroundColor: selectedTheme.value,
+            filter: `hue-rotate(var(--hue-shift))`,
+            zIndex: 1
+          }}
+        ></div>
         
-        {/* Animation layer - above background, below content */}
-        <div className="absolute inset-0 z-10 overflow-hidden">
+        {/* Animation layer - above background (z-index: 5), below content */}
+        <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
           {/* Render the appropriate background animation */}
           {backgroundAnimationType === 'orbs' && (
             <MemoizedOrbsContainer 
@@ -1131,9 +1204,10 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
           )}
         </div>
         
+        {/* Website title - z-index: 20 */}
         <motion.div
-          className="absolute z-20 text-white font-bold text-lg cursor-pointer"
-          style={{ left: '31.8%', top: '5rem' }}
+          className="absolute text-white font-bold text-lg cursor-pointer"
+          style={{ left: '31.8%', top: '5rem', zIndex: 20 }}
           initial={{ opacity: 1 }}
           animate={{ opacity: [0.8, 1, 0.8], transition: { duration: 3, repeat: Infinity, ease: 'easeInOut' } }}
           whileHover={{ rotate: [0, -3, 3, 0], scale: 1.15, filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.9))' }}
@@ -1142,7 +1216,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
           creativeworkflowlab.com
         </motion.div>
 
-        <div className="flex-1 mt-24 mb-[100px] flex items-start justify-center px-8 z-30 relative">
+        {/* Content layer - slide text on top (z-index: 30) */}
+        <div className="flex-1 mt-24 mb-[100px] flex items-start justify-center px-8 relative" style={{ zIndex: 30 }}>
           <motion.div
             drag
             dragConstraints={containerRef}
@@ -1184,8 +1259,14 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                       } 
                     : { color: slidesData[currentSlide].textColor || '#FFFFFF' }),
                   ...(slidesData[currentSlide].useCustomBackground
-                    ? { backgroundColor: slidesData[currentSlide].backgroundColor }
-                    : {})
+                    ? { 
+                        backgroundColor: slidesData[currentSlide].backgroundColor,
+                        filter: `hue-rotate(var(--hue-shift))`
+                      }
+                    : {
+                        backgroundColor: getSlideColor(currentSlide),
+                        filter: `hue-rotate(var(--hue-shift))`
+                      })
                 }}
                 whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.9))', scale: 1.05 }}
               >
