@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/css/main.2bcd927b.css",
-    "main.js": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.6c6074c4.js",
+    "main.css": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/css/main.2a5a199e.css",
+    "main.js": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.ed7e4201.js",
     "index.html": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/index.html",
-    "main.2bcd927b.css.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/css/main.2bcd927b.css.map",
-    "main.6c6074c4.js.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.6c6074c4.js.map"
+    "main.2a5a199e.css.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/css/main.2a5a199e.css.map",
+    "main.ed7e4201.js.map": "/MaxwellGenerative-CreativeTools-StoryBuilder-T1-V1.1/static/js/main.ed7e4201.js.map"
   },
   "entrypoints": [
-    "static/css/main.2bcd927b.css",
-    "static/js/main.6c6074c4.js"
+    "static/css/main.2a5a199e.css",
+    "static/js/main.ed7e4201.js"
   ]
 }
