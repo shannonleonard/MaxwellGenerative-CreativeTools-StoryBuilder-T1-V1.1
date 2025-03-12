@@ -68,19 +68,40 @@ export const recordVersionUse = () => {
   }
 };
 
-// Create a backup of current slides
-export const createBackup = (slides, name = 'auto') => {
+// Create a manual backup of current slides
+export const createBackup = (slides, name = 'manual') => {
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupName = name === 'auto' ? `backup-${timestamp}` : name;
+    const backupName = name === 'manual' ? `backup-${timestamp}` : name;
     const backups = JSON.parse(localStorage.getItem('slideBackups') || '{}');
     
+    // Add the new backup
     backups[backupName] = {
       slides: [...slides],
       timestamp: new Date().toISOString(),
       version: getVersion()
     };
     
+    // Keep only the last 10 backups
+    const backupEntries = Object.entries(backups);
+    if (backupEntries.length > 10) {
+      // Sort by timestamp (newest first)
+      backupEntries.sort((a, b) => 
+        new Date(b[1].timestamp) - new Date(a[1].timestamp)
+      );
+      
+      // Create a new object with only the 10 most recent backups
+      const recentBackups = {};
+      backupEntries.slice(0, 10).forEach(([key, value]) => {
+        recentBackups[key] = value;
+      });
+      
+      // Save the limited backups
+      localStorage.setItem('slideBackups', JSON.stringify(recentBackups));
+      return backupName;
+    }
+    
+    // Save all backups if we have 10 or fewer
     localStorage.setItem('slideBackups', JSON.stringify(backups));
     return backupName;
   } catch (error) {

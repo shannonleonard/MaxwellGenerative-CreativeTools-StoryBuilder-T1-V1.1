@@ -17,6 +17,14 @@ const orbColorThemes = [
   "from-lime-500 to-emerald-500"
 ];
 
+// Background animation styles
+const backgroundAnimations = [
+  { id: 'orbs', name: 'Floating Orbs', component: OrbsContainer },
+  { id: 'particles', name: 'Particles', component: ParticlesContainer },
+  { id: 'waves', name: 'Wave Effect', component: WavesContainer },
+  { id: 'none', name: 'None (Static)', component: null }
+];
+
 // useSlideOrbs now accepts an orbSpeed value that controls animation speed.
 function useSlideOrbs(slideIndex, orbCount = 8, orbSpeed = 1) {
   return useMemo(() => {
@@ -86,6 +94,84 @@ function OrbsContainer({ slideIndex, orbSpeed }) {
   );
 }
 
+// Particles background animation
+function ParticlesContainer({ slideIndex, orbSpeed }) {
+  const theme = orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
+  const particles = useMemo(() => {
+    const count = 30 + Math.floor(orbSpeed * 10);
+    return Array.from({ length: count }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: 3 + Math.random() * 8,
+      duration: (3 + Math.random() * 7) / orbSpeed
+    }));
+  }, [slideIndex, orbSpeed]);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map(particle => (
+        <motion.div
+          key={particle.id}
+          className={`absolute rounded-full bg-${theme}`}
+          style={{
+            width: particle.size,
+            height: particle.size,
+            x: `${particle.x}%`,
+            y: `${particle.y}%`,
+            opacity: 0.7
+          }}
+          animate={{
+            x: [`${particle.x}%`, `${(particle.x + 20) % 100}%`, `${(particle.x - 20 + 100) % 100}%`, `${particle.x}%`],
+            y: [`${particle.y}%`, `${(particle.y - 30 + 100) % 100}%`, `${(particle.y + 30) % 100}%`, `${particle.y}%`],
+            opacity: [0.3, 0.7, 0.3]
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Wave effect background
+function WavesContainer({ slideIndex, orbSpeed }) {
+  const theme = orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
+  const waveCount = 3;
+  
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {Array.from({ length: waveCount }).map((_, i) => {
+        const delay = i * 0.4;
+        const duration = (5 - i * 0.5) / orbSpeed;
+        
+        return (
+          <motion.div
+            key={i}
+            className={`absolute bottom-0 left-0 right-0 bg-${theme} opacity-20`}
+            style={{ height: '30%' }}
+            initial={{ y: '100%' }}
+            animate={{
+              y: ['100%', '-10%', '100%'],
+              scaleX: [1, 1.1, 1],
+              scaleY: [1, 1.2, 1],
+            }}
+            transition={{
+              duration,
+              delay,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 // -----------------------------------------------------
 // Static GIF Collection – 10 Unique Entries
 // -----------------------------------------------------
@@ -137,6 +223,8 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
       gradientEnd: slide.gradientEnd || '#FFFFFF',
       useGradient: slide.useGradient || false,
       fontWeight: slide.fontWeight || 'bold',
+      backgroundColor: slide.backgroundColor || 'transparent',
+      useCustomBackground: slide.useCustomBackground || false
     }))
   );
   const textareaRef = useRef(null);
@@ -162,6 +250,8 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
           gradientEnd: '#FFFFFF',
           useGradient: false,
           fontWeight: 'bold',
+          backgroundColor: 'transparent',
+          useCustomBackground: false
         });
       }
       setSlideStyles(newStyles);
@@ -216,6 +306,17 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     }
   };
 
+  const handleToggleCustomBackground = () => {
+    const newStyles = [...slideStyles];
+    if (newStyles[selectedSlideIndex]) {
+      newStyles[selectedSlideIndex] = {
+        ...newStyles[selectedSlideIndex],
+        useCustomBackground: !newStyles[selectedSlideIndex].useCustomBackground
+      };
+      setSlideStyles(newStyles);
+    }
+  };
+
   const handleApplyToAll = () => {
     if (slideStyles[selectedSlideIndex]) {
       const currentStyle = slideStyles[selectedSlideIndex];
@@ -263,6 +364,8 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     gradientEnd: '#FFFFFF',
     useGradient: false,
     fontWeight: 'bold',
+    backgroundColor: 'transparent',
+    useCustomBackground: false
   };
 
   return (
@@ -307,10 +410,11 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                 <div className="mb-4">
                   <label className="text-white block mb-2">Preview:</label>
                   <div 
-                    className="p-4 rounded bg-gray-900 min-h-[80px] flex items-center justify-center"
+                    className="p-4 rounded min-h-[80px] flex items-center justify-center"
+                    style={{ backgroundColor: currentStyle.useCustomBackground ? currentStyle.backgroundColor : 'rgba(17, 24, 39, 1)' }}
                   >
                     <div 
-                      className={`text-xl ${currentStyle.fontWeight}`}
+                      className={`text-xl font-${currentStyle.fontWeight}`}
                       style={
                         currentStyle.useGradient 
                           ? { 
@@ -327,59 +431,89 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                   </div>
                 </div>
                 
-                <div className="mb-4">
-                  <div className="flex items-center mb-2">
-                    <input 
-                      type="checkbox" 
-                      id="useGradient"
-                      checked={currentStyle.useGradient}
-                      onChange={handleToggleGradient}
-                      className="mr-2"
-                    />
-                    <label htmlFor="useGradient" className="text-white">Use Gradient</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <div className="flex items-center mb-2">
+                      <input 
+                        type="checkbox" 
+                        id="useGradient"
+                        checked={currentStyle.useGradient}
+                        onChange={handleToggleGradient}
+                        className="mr-2"
+                      />
+                      <label htmlFor="useGradient" className="text-white">Use Gradient Text</label>
+                    </div>
+                    
+                    {currentStyle.useGradient ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-white block mb-1">Gradient Start:</label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="color" 
+                              value={currentStyle.gradientStart} 
+                              onChange={(e) => handleStyleChange('gradientStart', e.target.value)} 
+                              className="w-10 h-10 rounded cursor-pointer"
+                            />
+                            <span className="text-white">{currentStyle.gradientStart}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-white block mb-1">Gradient End:</label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="color" 
+                              value={currentStyle.gradientEnd} 
+                              onChange={(e) => handleStyleChange('gradientEnd', e.target.value)} 
+                              className="w-10 h-10 rounded cursor-pointer"
+                            />
+                            <span className="text-white">{currentStyle.gradientEnd}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="text-white block mb-1">Text Color:</label>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={currentStyle.textColor} 
+                            onChange={(e) => handleStyleChange('textColor', e.target.value)} 
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <span className="text-white">{currentStyle.textColor}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
-                  {currentStyle.useGradient ? (
-                    <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center mb-2">
+                      <input 
+                        type="checkbox" 
+                        id="useCustomBackground"
+                        checked={currentStyle.useCustomBackground}
+                        onChange={handleToggleCustomBackground}
+                        className="mr-2"
+                      />
+                      <label htmlFor="useCustomBackground" className="text-white">Custom Background Color</label>
+                    </div>
+                    
+                    {currentStyle.useCustomBackground && (
                       <div>
-                        <label className="text-white block mb-1">Gradient Start:</label>
+                        <label className="text-white block mb-1">Background Color:</label>
                         <div className="flex items-center gap-2">
                           <input 
                             type="color" 
-                            value={currentStyle.gradientStart} 
-                            onChange={(e) => handleStyleChange('gradientStart', e.target.value)} 
+                            value={currentStyle.backgroundColor || '#000000'} 
+                            onChange={(e) => handleStyleChange('backgroundColor', e.target.value)} 
                             className="w-10 h-10 rounded cursor-pointer"
                           />
-                          <span className="text-white">{currentStyle.gradientStart}</span>
+                          <span className="text-white">{currentStyle.backgroundColor}</span>
                         </div>
                       </div>
-                      <div>
-                        <label className="text-white block mb-1">Gradient End:</label>
-                        <div className="flex items-center gap-2">
-                          <input 
-                            type="color" 
-                            value={currentStyle.gradientEnd} 
-                            onChange={(e) => handleStyleChange('gradientEnd', e.target.value)} 
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <span className="text-white">{currentStyle.gradientEnd}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-white block mb-1">Text Color:</label>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="color" 
-                          value={currentStyle.textColor} 
-                          onChange={(e) => handleStyleChange('textColor', e.target.value)} 
-                          className="w-10 h-10 rounded cursor-pointer"
-                        />
-                        <span className="text-white">{currentStyle.textColor}</span>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
                 
                 <div className="mb-4">
@@ -497,6 +631,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   ];
   const [selectedBackgroundTheme, setSelectedBackgroundTheme] = useState(backgroundThemes[0].value);
   const [orbSpeed, setOrbSpeed] = useState(1);
+  const [backgroundAnimationType, setBackgroundAnimationType] = useState('orbs');
 
   // Animation controls for the slide text
   const textControls = useAnimation();
@@ -661,11 +796,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     setDroppedGifs([]);
   };
 
-  // Create automatic backup when slides change
-  useEffect(() => {
-    createBackup(slidesData);
-  }, [slidesData]);
-
   // Handle saving edited slides
   const handleSaveSlides = (newSlides) => {
     setSlidesData(newSlides);
@@ -675,7 +805,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       setCurrentSlide(0);
     }
     
-    // Create a named backup after editing
+    // Create a named backup after editing (keeping this manual backup)
     createBackup(newSlides, 'after-edit-' + new Date().toISOString().slice(0, 10));
   };
   
@@ -737,6 +867,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
           >
             Manage Backups
           </button>
+          <button 
+            onClick={() => createBackup(slidesData, 'manual-' + new Date().toISOString().slice(0, 10))} 
+            className="p-2 bg-green-600 text-white rounded hover:bg-green-500"
+          >
+            Create Backup
+          </button>
         </div>
         <div className="flex flex-wrap gap-4 justify-center">
           <div>
@@ -752,7 +888,19 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             </select>
           </div>
           <div>
-            <label className="text-white font-bold mr-2">Orb Speed:</label>
+            <label className="text-white font-bold mr-2">Background Animation:</label>
+            <select
+              value={backgroundAnimationType}
+              onChange={(e) => setBackgroundAnimationType(e.target.value)}
+              className="p-1 border rounded"
+            >
+              {backgroundAnimations.map(animation => (
+                <option key={animation.id} value={animation.id}>{animation.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-white font-bold mr-2">Animation Speed:</label>
             <input
               type="range"
               min="0.5"
@@ -772,7 +920,16 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         className="relative aspect-[9/16] w-full max-w-xl overflow-hidden rounded-3xl shadow-xl flex flex-col p-4"
         style={{ backgroundColor: selectedBackgroundTheme }}
       >
-        <OrbsContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+        {/* Render the appropriate background animation */}
+        {backgroundAnimationType === 'orbs' && (
+          <OrbsContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+        )}
+        {backgroundAnimationType === 'particles' && (
+          <ParticlesContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+        )}
+        {backgroundAnimationType === 'waves' && (
+          <WavesContainer slideIndex={currentSlide} orbSpeed={orbSpeed} />
+        )}
         
         <motion.div
           className="absolute z-20 text-white font-bold text-lg cursor-pointer"
@@ -816,17 +973,20 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                   scale: { duration: 0.2, ease: "backInOut" },
                   filter: { duration: 0.6, times: [0, 0.3, 1], ease: "easeInOut" }
                 }}
-                className={`text-left max-w-2xl p-8 ${slidesData[currentSlide].fontWeight || 'font-bold'} text-4xl leading-relaxed`}
-                style={
-                  slidesData[currentSlide].useGradient 
+                className={`text-left max-w-2xl p-8 ${slidesData[currentSlide].fontWeight || 'font-bold'} text-4xl leading-relaxed rounded-lg`}
+                style={{
+                  ...(slidesData[currentSlide].useGradient 
                     ? { 
                         background: `linear-gradient(to right, ${slidesData[currentSlide].gradientStart || '#FFFFFF'}, ${slidesData[currentSlide].gradientEnd || '#FFFFFF'})`,
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text'
                       } 
-                    : { color: slidesData[currentSlide].textColor || '#FFFFFF' }
-                }
+                    : { color: slidesData[currentSlide].textColor || '#FFFFFF' }),
+                  ...(slidesData[currentSlide].useCustomBackground
+                    ? { backgroundColor: slidesData[currentSlide].backgroundColor }
+                    : {})
+                }}
                 whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.9))', scale: 1.05 }}
               >
                 {slidesData[currentSlide].text || slidesData[currentSlide]}
