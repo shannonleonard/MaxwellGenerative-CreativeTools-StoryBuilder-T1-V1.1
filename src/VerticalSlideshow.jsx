@@ -63,7 +63,7 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null }) {
         {orbs.map((orb, i) => (
           <motion.div
             key={i}
-            className={`absolute rounded-full bg-gradient-to-r ${orb.theme} opacity-40 blur-[120px]`}
+            className={`absolute rounded-full bg-gradient-to-r ${orb.theme} opacity-40 blur-[90px]`}
             style={{
               transformStyle: 'preserve-3d',
               width: orb.width,
@@ -644,38 +644,38 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const backgroundThemes = useMemo(() => [
     { 
       name: "Chic Blue", 
-      value: "#0D47A1", 
-      orbTheme: "from-blue-500 to-indigo-500",
-      particleColor: "blue-500",
-      waveColor: "blue-500"
+      value: "#0A2472", // Darker blue for better contrast with white
+      orbTheme: "from-blue-600 to-indigo-800",
+      particleColor: "blue-700",
+      waveColor: "blue-800"
     },
     { 
-      name: "Royal Blue", 
-      value: "#1565C0", 
-      orbTheme: "from-indigo-500 to-violet-500",
-      particleColor: "indigo-500",
-      waveColor: "indigo-500"
+      name: "Royal Purple", 
+      value: "#3C096C", // Deep purple for high contrast
+      orbTheme: "from-purple-600 to-violet-900",
+      particleColor: "purple-700",
+      waveColor: "purple-800"
     },
     { 
-      name: "Midnight Blue", 
-      value: "#283593", 
-      orbTheme: "from-purple-500 to-pink-500",
-      particleColor: "purple-500",
-      waveColor: "purple-500"
+      name: "Forest Green", 
+      value: "#184E1C", // Dark green for readability
+      orbTheme: "from-green-700 to-teal-900",
+      particleColor: "green-800",
+      waveColor: "green-900"
     },
     { 
-      name: "Deep Teal", 
-      value: "#00695C", 
-      orbTheme: "from-green-500 to-teal-500",
-      particleColor: "teal-500",
-      waveColor: "teal-500"
+      name: "Deep Crimson", 
+      value: "#630A10", // Dark red for contrast
+      orbTheme: "from-red-700 to-rose-900",
+      particleColor: "red-800",
+      waveColor: "red-900"
     },
     { 
-      name: "Classic Navy", 
-      value: "#1A237E", 
-      orbTheme: "from-blue-500 to-cyan-500",
-      particleColor: "blue-500",
-      waveColor: "blue-500"
+      name: "Amber Gold", 
+      value: "#7A4100", // Dark amber/brown for contrast with white
+      orbTheme: "from-yellow-600 to-amber-900",
+      particleColor: "amber-700",
+      waveColor: "amber-800"
     }
   ], []);
   
@@ -689,22 +689,58 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
 
   // CSS Variables for theme colors
   useEffect(() => {
-    // Apply CSS variables for the theme colors
+    // Apply CSS variables for the theme colors - light to dark ranges
     document.documentElement.style.setProperty('--pink-500', '#ec4899');
     document.documentElement.style.setProperty('--purple-500', '#a855f7');
+    document.documentElement.style.setProperty('--purple-600', '#9333ea');
+    document.documentElement.style.setProperty('--purple-700', '#7e22ce');
+    document.documentElement.style.setProperty('--purple-800', '#6b21a8');
+    document.documentElement.style.setProperty('--purple-900', '#581c87');
+    
     document.documentElement.style.setProperty('--blue-500', '#3b82f6');
+    document.documentElement.style.setProperty('--blue-600', '#2563eb');
+    document.documentElement.style.setProperty('--blue-700', '#1d4ed8');
+    document.documentElement.style.setProperty('--blue-800', '#1e40af');
+    document.documentElement.style.setProperty('--blue-900', '#1e3a8a');
+    
     document.documentElement.style.setProperty('--cyan-500', '#06b6d4');
+    
     document.documentElement.style.setProperty('--green-500', '#22c55e');
+    document.documentElement.style.setProperty('--green-700', '#15803d');
+    document.documentElement.style.setProperty('--green-800', '#166534');
+    document.documentElement.style.setProperty('--green-900', '#14532d');
+    
     document.documentElement.style.setProperty('--teal-500', '#14b8a6');
+    document.documentElement.style.setProperty('--teal-900', '#134e4a');
+    
     document.documentElement.style.setProperty('--red-500', '#ef4444');
-    document.documentElement.style.setProperty('--orange-500', '#f97316');
-    document.documentElement.style.setProperty('--yellow-500', '#eab308');
-    document.documentElement.style.setProperty('--amber-500', '#f59e0b');
-    document.documentElement.style.setProperty('--indigo-500', '#6366f1');
-    document.documentElement.style.setProperty('--violet-500', '#8b5cf6');
+    document.documentElement.style.setProperty('--red-700', '#b91c1c');
+    document.documentElement.style.setProperty('--red-800', '#991b1b');
+    document.documentElement.style.setProperty('--red-900', '#7f1d1d');
+    
     document.documentElement.style.setProperty('--rose-500', '#f43f5e');
+    document.documentElement.style.setProperty('--rose-900', '#881337');
+    
+    document.documentElement.style.setProperty('--orange-500', '#f97316');
+    
+    document.documentElement.style.setProperty('--yellow-500', '#eab308');
+    document.documentElement.style.setProperty('--yellow-600', '#ca8a04');
+    
+    document.documentElement.style.setProperty('--amber-500', '#f59e0b');
+    document.documentElement.style.setProperty('--amber-700', '#b45309');
+    document.documentElement.style.setProperty('--amber-800', '#92400e');
+    document.documentElement.style.setProperty('--amber-900', '#78350f');
+    
+    document.documentElement.style.setProperty('--indigo-500', '#6366f1');
+    document.documentElement.style.setProperty('--indigo-800', '#3730a3');
+    
+    document.documentElement.style.setProperty('--violet-500', '#8b5cf6');
+    document.documentElement.style.setProperty('--violet-900', '#4c1d95');
+    
     document.documentElement.style.setProperty('--fuchsia-500', '#d946ef');
+    
     document.documentElement.style.setProperty('--lime-500', '#84cc16');
+    
     document.documentElement.style.setProperty('--emerald-500', '#10b981');
   }, []);
 
