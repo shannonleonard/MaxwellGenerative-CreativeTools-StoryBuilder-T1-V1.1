@@ -205,9 +205,26 @@ function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, th
   );
 }
 
-const MemoizedOrbsContainer = React.memo(OrbsContainer);
-const MemoizedParticlesContainer = React.memo(ParticlesContainer);
-const MemoizedWavesContainer = React.memo(WavesContainer);
+const MemoizedOrbsContainer = React.memo(OrbsContainer, (prevProps, nextProps) => {
+  return prevProps.slideIndex === nextProps.slideIndex && 
+         prevProps.orbSpeed === nextProps.orbSpeed && 
+         prevProps.themeOverride === nextProps.themeOverride && 
+         prevProps.blurAmount === nextProps.blurAmount;
+});
+
+const MemoizedParticlesContainer = React.memo(ParticlesContainer, (prevProps, nextProps) => {
+  return prevProps.slideIndex === nextProps.slideIndex && 
+         prevProps.orbSpeed === nextProps.orbSpeed && 
+         prevProps.themeOverride === nextProps.themeOverride && 
+         prevProps.blurAmount === nextProps.blurAmount;
+});
+
+const MemoizedWavesContainer = React.memo(WavesContainer, (prevProps, nextProps) => {
+  return prevProps.slideIndex === nextProps.slideIndex && 
+         prevProps.orbSpeed === nextProps.orbSpeed && 
+         prevProps.themeOverride === nextProps.themeOverride && 
+         prevProps.blurAmount === nextProps.blurAmount;
+});
 
 // Background animation styles
 const backgroundAnimations = [
@@ -1107,7 +1124,12 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
+      // Reset time reference to prevent delta time jumps between mounts
+      lastTimeRef.current = null;
     };
   }, [baseX, baseY, movementSpeed]);
 
@@ -1432,26 +1454,21 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             whileTap={{ cursor: 'grabbing' }}
             className="cursor-grab"
           >
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={currentSlide}
-                initial={{ opacity: 0, y: 130, scale: 0.95, filter: "drop-shadow(0 0 0px rgba(255,255,255,0))" }}
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
                 animate={{
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  filter: [
-                    "drop-shadow(0 0 0px rgba(255,255,255,0))",
-                    "drop-shadow(0 0 25px rgba(255,255,255,1))",
-                    "drop-shadow(0 0 0px rgba(255,255,255,0))"
-                  ]
+                  filter: "drop-shadow(0 0 10px rgba(255,255,255,0.3))"
                 }}
                 exit={{ opacity: 0, y: -30, scale: 0.95 }}
                 transition={{
-                  opacity: { duration: 0.2, ease: "backInOut" },
-                  y: { duration: 0.2, ease: "backInOut" },
-                  scale: { duration: 0.2, ease: "backInOut" },
-                  filter: { duration: 0.6, times: [0, 0.3, 1], ease: "easeInOut" }
+                  opacity: { duration: 0.15, ease: "easeInOut" },
+                  y: { duration: 0.15, ease: "easeInOut" },
+                  scale: { duration: 0.15, ease: "easeInOut" }
                 }}
                 className={`text-left max-w-2xl p-8 text-4xl leading-relaxed rounded-lg font-${slidesData[currentSlide].fontWeight || 'bold'}`}
                 style={{
@@ -1470,7 +1487,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                         filter: `hue-rotate(var(--hue-shift))`
                       })
                 }}
-                whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.9))', scale: 1.05 }}
+                whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.7))', scale: 1.03 }}
               >
                 {slidesData[currentSlide].text || slidesData[currentSlide]}
               </motion.div>
