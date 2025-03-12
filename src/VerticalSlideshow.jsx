@@ -710,6 +710,50 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   // Store randomly generated slide colors
   const [slideColorMap, setSlideColorMap] = useState({});
 
+  // Additional customization: Background theme and orb speed.
+  const backgroundThemes = useMemo(() => [
+    { 
+      name: "Chic Blue", 
+      value: "#0A2472", // Darker blue for better contrast with white
+      orbTheme: "from-blue-600 to-indigo-800",
+      particleColor: "blue-700",
+      waveColor: "blue-800",
+      slideColors: ["#0A2472", "#123388", "#1E40AF", "#1D4ED8", "#2563EB", "#3B82F6"]
+    },
+    { 
+      name: "Royal Purple", 
+      value: "#3C096C", // Deep purple for high contrast
+      orbTheme: "from-purple-600 to-violet-900",
+      particleColor: "purple-700",
+      waveColor: "purple-800",
+      slideColors: ["#3C096C", "#4C1D95", "#5B21B6", "#6D28D9", "#7E22CE", "#8B5CF6"]
+    },
+    { 
+      name: "Forest Green", 
+      value: "#184E1C", // Dark green for readability
+      orbTheme: "from-green-700 to-teal-900",
+      particleColor: "green-800",
+      waveColor: "green-900",
+      slideColors: ["#184E1C", "#166534", "#15803D", "#16A34A", "#22C55E", "#4ADE80"]
+    },
+    { 
+      name: "Deep Crimson", 
+      value: "#630A10", // Dark red for contrast
+      orbTheme: "from-red-700 to-rose-900",
+      particleColor: "red-800",
+      waveColor: "red-900",
+      slideColors: ["#630A10", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626", "#EF4444"]
+    },
+    { 
+      name: "Amber Gold", 
+      value: "#7A4100", // Dark amber/brown for contrast with white
+      orbTheme: "from-yellow-600 to-amber-900",
+      particleColor: "amber-700",
+      waveColor: "amber-800",
+      slideColors: ["#7A4100", "#92400E", "#A16207", "#B45309", "#D97706", "#F59E0B"]
+    }
+  ], []);
+
   // Enhanced function to generate more varied complementary colors for slides
   const generateRandomSlideColor = useCallback((themeIndex, slideIndex) => {
     const theme = backgroundThemes[themeIndex];
@@ -849,50 +893,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     return baseColor;
   };
 
-  // Additional customization: Background theme and orb speed.
-  const backgroundThemes = useMemo(() => [
-    { 
-      name: "Chic Blue", 
-      value: "#0A2472", // Darker blue for better contrast with white
-      orbTheme: "from-blue-600 to-indigo-800",
-      particleColor: "blue-700",
-      waveColor: "blue-800",
-      slideColors: ["#0A2472", "#123388", "#1E40AF", "#1D4ED8", "#2563EB", "#3B82F6"]
-    },
-    { 
-      name: "Royal Purple", 
-      value: "#3C096C", // Deep purple for high contrast
-      orbTheme: "from-purple-600 to-violet-900",
-      particleColor: "purple-700",
-      waveColor: "purple-800",
-      slideColors: ["#3C096C", "#4C1D95", "#5B21B6", "#6D28D9", "#7E22CE", "#8B5CF6"]
-    },
-    { 
-      name: "Forest Green", 
-      value: "#184E1C", // Dark green for readability
-      orbTheme: "from-green-700 to-teal-900",
-      particleColor: "green-800",
-      waveColor: "green-900",
-      slideColors: ["#184E1C", "#166534", "#15803D", "#16A34A", "#22C55E", "#4ADE80"]
-    },
-    { 
-      name: "Deep Crimson", 
-      value: "#630A10", // Dark red for contrast
-      orbTheme: "from-red-700 to-rose-900",
-      particleColor: "red-800",
-      waveColor: "red-900",
-      slideColors: ["#630A10", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626", "#EF4444"]
-    },
-    { 
-      name: "Amber Gold", 
-      value: "#7A4100", // Dark amber/brown for contrast with white
-      orbTheme: "from-yellow-600 to-amber-900",
-      particleColor: "amber-700",
-      waveColor: "amber-800",
-      slideColors: ["#7A4100", "#92400E", "#A16207", "#B45309", "#D97706", "#F59E0B"]
-    }
-  ], []);
-  
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
   const [orbSpeed, setOrbSpeed] = useState(1);
   const [backgroundAnimationType, setBackgroundAnimationType] = useState('orbs');
