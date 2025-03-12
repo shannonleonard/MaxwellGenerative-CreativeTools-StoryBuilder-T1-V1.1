@@ -284,7 +284,8 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
       useGradient: slide.useGradient || false,
       fontWeight: slide.fontWeight || 'bold',
       backgroundColor: slide.backgroundColor || 'transparent',
-      useCustomBackground: slide.useCustomBackground || false
+      useCustomBackground: slide.useCustomBackground || false,
+      transparentBackground: slide.transparentBackground || false
     }))
   );
   const textareaRef = useRef(null);
@@ -311,7 +312,8 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
           useGradient: false,
           fontWeight: 'bold',
           backgroundColor: 'transparent',
-          useCustomBackground: false
+          useCustomBackground: false,
+          transparentBackground: false
         });
       }
       setSlideStyles(newStyles);
@@ -425,7 +427,8 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     useGradient: false,
     fontWeight: 'bold',
     backgroundColor: 'transparent',
-    useCustomBackground: false
+    useCustomBackground: false,
+    transparentBackground: false
   };
 
   return (
@@ -470,11 +473,22 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                 <div className="mb-4">
                   <label className="text-white block mb-2">Preview:</label>
                   <div 
-                    className="p-4 rounded min-h-[80px] flex items-center justify-center"
-                    style={{ backgroundColor: currentStyle.useCustomBackground ? currentStyle.backgroundColor : 'rgba(17, 24, 39, 1)' }}
+                    className={`p-4 rounded min-h-[80px] flex items-center justify-center ${currentStyle.transparentBackground ? 'bg-gray-600 bg-opacity-50' : ''}`}
+                    style={{ 
+                      backgroundColor: currentStyle.transparentBackground 
+                        ? 'transparent' 
+                        : currentStyle.useCustomBackground 
+                          ? currentStyle.backgroundColor 
+                          : 'rgba(17, 24, 39, 1)',
+                      backgroundImage: currentStyle.transparentBackground 
+                        ? 'linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444), linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444)'
+                        : 'none',
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: '0 0, 10px 10px',
+                    }}
                   >
                     <div 
-                      className={`text-xl font-${currentStyle.fontWeight}`}
+                      className={`text-xl font-${currentStyle.fontWeight} ${currentStyle.transparentBackground ? 'p-2' : ''}`}
                       style={
                         currentStyle.useGradient 
                           ? { 
@@ -551,15 +565,28 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
                     <div className="flex items-center mb-2">
                       <input 
                         type="checkbox" 
-                        id="useCustomBackground"
-                        checked={currentStyle.useCustomBackground}
-                        onChange={handleToggleCustomBackground}
+                        id="transparentBackground"
+                        checked={currentStyle.transparentBackground}
+                        onChange={() => handleStyleChange('transparentBackground', !currentStyle.transparentBackground)}
                         className="mr-2"
                       />
-                      <label htmlFor="useCustomBackground" className="text-white">Custom Background Color</label>
+                      <label htmlFor="transparentBackground" className="text-white">Transparent Background</label>
                     </div>
                     
-                    {currentStyle.useCustomBackground && (
+                    {!currentStyle.transparentBackground && (
+                      <div className="flex items-center mb-2">
+                        <input 
+                          type="checkbox" 
+                          id="useCustomBackground"
+                          checked={currentStyle.useCustomBackground}
+                          onChange={handleToggleCustomBackground}
+                          className="mr-2"
+                        />
+                        <label htmlFor="useCustomBackground" className="text-white">Custom Background Color</label>
+                      </div>
+                    )}
+                    
+                    {!currentStyle.transparentBackground && currentStyle.useCustomBackground && (
                       <div>
                         <label className="text-white block mb-1">Background Color:</label>
                         <div className="flex items-center gap-2">
@@ -1256,15 +1283,17 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
                         backgroundClip: 'text'
                       } 
                     : { color: slidesData[currentSlide].textColor || '#FFFFFF' }),
-                  ...(slidesData[currentSlide].useCustomBackground
-                    ? { 
-                        backgroundColor: slidesData[currentSlide].backgroundColor,
-                        filter: `hue-rotate(var(--hue-shift))`
-                      }
-                    : {
-                        backgroundColor: getSlideColor(currentSlide),
-                        filter: `hue-rotate(var(--hue-shift))`
-                      })
+                  ...(slidesData[currentSlide].transparentBackground
+                    ? {}  // No background if transparent is enabled
+                    : slidesData[currentSlide].useCustomBackground
+                      ? { 
+                          backgroundColor: slidesData[currentSlide].backgroundColor,
+                          filter: `hue-rotate(var(--hue-shift))`
+                        }
+                      : {
+                          backgroundColor: getSlideColor(currentSlide),
+                          filter: `hue-rotate(var(--hue-shift))`
+                        })
                 }}
                 whileHover={{ filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.9))', scale: 1.05 }}
               >
