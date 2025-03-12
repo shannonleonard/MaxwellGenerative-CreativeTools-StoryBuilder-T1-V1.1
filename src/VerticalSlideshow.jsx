@@ -430,6 +430,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   const keysPressed = useRef({ w: false, a: false, s: false, d: false });
   const lastTimeRef = useRef(null);
   const rafId = useRef(null);
+  const isInitialMount = useRef(true);
+  const preventKeyResetRef = useRef(false);
   
   // Function to generate a color with a shifted hue
   const shiftHue = (baseColor, shift) => {
@@ -464,20 +466,9 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     }
   }, [currentSlide, selectedThemeIndex, globalHueShift, backgroundThemes, autoShiftColor]);
 
-  // Cleanup animation resources on unmount and when changing slides
-  // Single cleanupAnimations effect to prevent animation leaks
+  // Cleanup animation resources ONLY on unmount, not between slides
   useEffect(() => {
-    // Reset all animations when slide changes
-    if (textControls) {
-      textControls.set({
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        filter: "drop-shadow(0 0 25px rgba(255,255,255,0.5))"
-      });
-    }
-    
-    // Return cleanup function
+    // Return cleanup function that only runs on unmount
     return () => {
       // Cancel any outstanding animation frames
       if (rafId.current) {
@@ -490,6 +481,22 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         textControls.stop();
       }
     };
+  }, []); // Empty dependency array = only on mount/unmount
+
+  // Handle slide changes separately without disrupting the WASD animation loop
+  useEffect(() => {
+    // Reset text animations when slide changes
+    if (textControls && !isInitialMount.current) {
+      textControls.set({
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        filter: "drop-shadow(0 0 25px rgba(255,255,255,0.5))"
+      });
+    }
+    isInitialMount.current = false;
+    
+    // We don't reset rafId or animation loop here to keep WASD working
   }, [currentSlide, textControls]);
 
   // Reset functionality
@@ -589,7 +596,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     document.documentElement.style.setProperty('--hue-shift', `${globalHueShift}deg`);
   }, [globalHueShift]);
 
-  // Fix the WASD movement issue with a more robust implementation
+  // Fix the WASD movement with a more persistent implementation
   useEffect(() => {
     // Use a higher movement speed for better responsiveness
     const movementSpeed = 3.0;
@@ -601,6 +608,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         const key = e.key.toLowerCase();
         if (["w", "a", "s", "d"].includes(key)) {
           keysPressed.current[key] = true;
+          // Set this flag to prevent key state reset when slide changes
+          preventKeyResetRef.current = true;
           // Prevent scrolling
           e.preventDefault();
         }
@@ -628,9 +637,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         if (keysPressed.current.d) baseX.set(baseX.get() + movement);
 
         // Only continue animation if component is still mounted
-        if (rafId.current) {
-          rafId.current = requestAnimationFrame(animate);
-        }
+        rafId.current = requestAnimationFrame(animate);
       } catch (err) {
         console.error("Animation error:", err);
         // Try to recover
@@ -645,22 +652,24 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     document.addEventListener('keydown', handleKeyDown, { passive: false, capture: true });
     document.addEventListener('keyup', handleKeyUp, { capture: true });
     
-    // Start animation
-    rafId.current = requestAnimationFrame(animate);
+    // Start animation only if it's not already running
+    if (!rafId.current) {
+      rafId.current = requestAnimationFrame(animate);
+    }
 
     // Cleanup function
     return () => {
       document.removeEventListener('keydown', handleKeyDown, { capture: true });
       document.removeEventListener('keyup', handleKeyUp, { capture: true });
       
-      if (rafId.current) {
-        cancelAnimationFrame(rafId.current);
-        rafId.current = null;
+      // Don't cancel animation frame here! We'll let it run for the lifecycle of the component
+      // Instead, only reset keys if not prevented (user isn't actively pressing a key)
+      if (!preventKeyResetRef.current) {
+        keysPressed.current = { w: false, a: false, s: false, d: false };
       }
       
-      lastTimeRef.current = null;
-      // Reset all keys to prevent stuck keys
-      keysPressed.current = { w: false, a: false, s: false, d: false };
+      // Allow keys to be reset on next effect run
+      preventKeyResetRef.current = false;
     };
   }, [baseX, baseY, isEditModalOpen, isBackupManagerOpen]); // Add modal states as dependencies
 
