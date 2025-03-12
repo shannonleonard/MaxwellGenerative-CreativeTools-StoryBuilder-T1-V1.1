@@ -22,7 +22,7 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
   const orbs = useSlideOrbs(slideIndex, 8, orbSpeed, themeOverride);
   
   return (
-    <div className="fixed inset-0 overflow-hidden -z-10">
+    <div className="absolute inset-0 overflow-hidden -z-10">
       {orbs.map((orb, index) => (
         <motion.div
           key={`orb-${index}`}
@@ -32,7 +32,7 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
             height: orb.height,
             x: `${orb.x}%`,
             y: `${orb.y}%`,
-            zIndex: orb.z
+            zIndex: -1
           }}
           animate={{
             x: [
@@ -50,7 +50,7 @@ function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount 
           }}
           transition={{
             duration: orb.duration,
-            ease: "linear",
+            ease: "easeInOut",
             repeat: Infinity,
           }}
         />
@@ -71,14 +71,14 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
         x: Math.random() * 100,
         y: Math.random() * 100,
         size: 2 + Math.random() * 6,
-        duration: (3 + Math.random() * 7) / (orbSpeed || 1),
+        duration: (3 + Math.random() * 7) / (Math.max(0.5, orbSpeed || 1)),
       });
     }
     setParticles(newParticles);
   }, [slideIndex, orbSpeed, themeOverride]);
 
   return (
-    <div className="fixed inset-0 overflow-hidden -z-10">
+    <div className="absolute inset-0 overflow-hidden -z-10">
       {particles.map((particle) => (
         <motion.div
           key={`particle-${particle.id}`}
@@ -88,6 +88,7 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
             height: `${particle.size}px`,
             left: `${particle.x}%`,
             top: `${particle.y}%`,
+            zIndex: -1
           }}
           animate={{
             x: [0, Math.random() * 100 - 50, Math.random() * 100 - 50, 0],
@@ -109,7 +110,7 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
 
 function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
   const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
-  const speed = orbSpeed || 1;
+  const speed = Math.max(0.3, orbSpeed || 1);
   
   const waveProps = useMemo(() => {
     return Array(3).fill().map((_, i) => ({
@@ -123,7 +124,7 @@ function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount
   }, [speed]);
 
   return (
-    <div className="fixed inset-0 overflow-hidden -z-10">
+    <div className="absolute inset-0 overflow-hidden -z-10">
       {waveProps.map((wave, i) => (
         <WaveComponent 
           key={i}
@@ -145,7 +146,7 @@ function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, th
         x: [0, -100],
         transition: { 
           duration: 10 / speed,
-          ease: "linear",
+          ease: "easeInOut",
           repeat: Infinity
         }
       });
@@ -163,10 +164,10 @@ function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, th
   }, [amplitude, frequency, phase]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div className="absolute inset-0 overflow-hidden -z-10">
       <motion.div
         className={`absolute w-[200%] h-full bg-gradient-to-r ${theme} blur-[${blurAmount}px]`}
-        style={{ clipPath: `polygon(${wavePoints})` }}
+        style={{ clipPath: `polygon(${wavePoints})`, zIndex: -1 }}
         animate={animationControls}
       >
         <div 
@@ -194,10 +195,13 @@ const backgroundAnimations = [
 function useSlideOrbs(slideIndex, orbCount = 8, orbSpeed = 1, themeOverride = null) {
   return useMemo(() => {
     const newOrbs = [];
+    // Ensure minimum speed
+    const effectiveSpeed = Math.max(0.2, orbSpeed);
+    
     for (let i = 0; i < orbCount; i++) {
       const baseDuration = 15 + i * 3;
       // A higher orbSpeed means faster movement (shorter animation duration).
-      const duration = baseDuration / (orbSpeed * 1.5);
+      const duration = baseDuration / (effectiveSpeed * 1.5);
       newOrbs.push({
         x: Math.random() * 100,
         y: Math.random() * 100,
@@ -638,6 +642,21 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     }
   ]);
   
+  // Global text color
+  const [globalTextColor, setGlobalTextColor] = useState("#FFFFFF");
+  
+  // Function to apply global text color to all slides
+  const applyGlobalTextColor = (color) => {
+    setGlobalTextColor(color);
+    setSlidesData(prevSlides => 
+      prevSlides.map(slide => ({
+        ...slide,
+        textColor: color,
+        useGradient: false // Disable gradient when applying global color
+      }))
+    );
+  };
+  
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
@@ -1036,7 +1055,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             <label className="text-white font-bold mr-2">Animation Speed:</label>
             <input
               type="range"
-              min="0.5"
+              min="0.2"
               max="3"
               step="0.1"
               value={orbSpeed}
@@ -1057,6 +1076,19 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
               className="cursor-pointer"
             />
             <span className="text-white ml-1">{blurAmount}px</span>
+          </div>
+          {/* Global Text Color Control */}
+          <div>
+            <label className="text-white font-bold mr-2">Global Text Color:</label>
+            <div className="flex items-center gap-2">
+              <input 
+                type="color" 
+                value={globalTextColor} 
+                onChange={(e) => applyGlobalTextColor(e.target.value)} 
+                className="w-8 h-8 rounded cursor-pointer"
+              />
+              <span className="text-white">{globalTextColor}</span>
+            </div>
           </div>
         </div>
       </div>
