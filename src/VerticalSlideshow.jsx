@@ -583,20 +583,28 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
 
   // Allow text movement with WASD keys
   useEffect(() => {
-    const movementSpeed = 0.5;
+    // Increase movement speed for more noticeable movement
+    const movementSpeed = 2.5; // Increased from 0.5
+    
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
-      if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = true;
+      if (["w", "a", "s", "d"].includes(key)) {
+        keysPressed.current[key] = true;
+        // Prevent default behavior (like scrolling) for these keys
+        e.preventDefault();
+      }
     };
 
     const handleKeyUp = (e) => {
       const key = e.key.toLowerCase();
-      if (["w", "a", "s", "d"].includes(key)) keysPressed.current[key] = false;
+      if (["w", "a", "s", "d"].includes(key)) {
+        keysPressed.current[key] = false;
+      }
     };
 
     function animate(time) {
       if (!lastTimeRef.current) lastTimeRef.current = time;
-      const delta = time - lastTimeRef.current;
+      const delta = Math.min(time - lastTimeRef.current, 100); // Cap delta to prevent jumps
       lastTimeRef.current = time;
       const movement = movementSpeed * delta;
 
@@ -608,7 +616,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       rafId.current = requestAnimationFrame(animate);
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    // Add passive: false to ensure preventDefault works correctly
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
     window.addEventListener('keyup', handleKeyUp);
     rafId.current = requestAnimationFrame(animate);
 
@@ -620,6 +629,8 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         rafId.current = null;
       }
       lastTimeRef.current = null;
+      // Reset all keys when unmounting
+      keysPressed.current = { w: false, a: false, s: false, d: false };
     };
   }, [baseX, baseY]);
 
