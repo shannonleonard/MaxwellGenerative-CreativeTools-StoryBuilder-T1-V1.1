@@ -17,6 +17,171 @@ const orbColorThemes = [
   "from-lime-500 to-emerald-500"
 ];
 
+// Define the components first before using them
+function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 90 }) {
+  const orbs = useSlideOrbs(slideIndex, 8, orbSpeed, themeOverride);
+  
+  return (
+    <div className="fixed inset-0 overflow-hidden -z-10">
+      {orbs.map((orb, index) => (
+        <motion.div
+          key={`orb-${index}`}
+          className={`absolute rounded-full bg-gradient-to-br ${orb.theme} opacity-70 blur-[${blurAmount}px]`}
+          style={{
+            width: orb.width,
+            height: orb.height,
+            x: `${orb.x}%`,
+            y: `${orb.y}%`,
+            zIndex: orb.z
+          }}
+          animate={{
+            x: [
+              `${orb.x}%`,
+              `${(orb.x + 20) % 100}%`,
+              `${(orb.x + 40) % 100}%`,
+              `${orb.x}%`
+            ],
+            y: [
+              `${orb.y}%`,
+              `${(orb.y + 30) % 100}%`,
+              `${(orb.y + 10) % 100}%`,
+              `${orb.y}%`
+            ],
+          }}
+          transition={{
+            duration: orb.duration,
+            ease: "linear",
+            repeat: Infinity,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
+  const [particles, setParticles] = useState([]);
+  const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
+  
+  useEffect(() => {
+    const newParticles = [];
+    for (let i = 0; i < 40; i++) {
+      newParticles.push({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: 2 + Math.random() * 6,
+        duration: (3 + Math.random() * 7) / (orbSpeed || 1),
+      });
+    }
+    setParticles(newParticles);
+  }, [slideIndex, orbSpeed, themeOverride]);
+
+  return (
+    <div className="fixed inset-0 overflow-hidden -z-10">
+      {particles.map((particle) => (
+        <motion.div
+          key={`particle-${particle.id}`}
+          className={`absolute rounded-full bg-gradient-to-br ${theme} blur-[${blurAmount}px]`}
+          style={{
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+          }}
+          animate={{
+            x: [0, Math.random() * 100 - 50, Math.random() * 100 - 50, 0],
+            y: [0, Math.random() * 100 - 50, Math.random() * 100 - 50, 0],
+            opacity: [0, 0.7, 0.7, 0],
+            scale: [0, 1, 1, 0],
+          }}
+          transition={{
+            duration: particle.duration,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: Math.random() * 2,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
+  const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
+  const speed = orbSpeed || 1;
+  
+  const waveProps = useMemo(() => {
+    return Array(3).fill().map((_, i) => ({
+      amplitude: 20 + i * 10,
+      frequency: 0.5 + i * 0.2,
+      phase: i * Math.PI / 2,
+      speed: (0.5 + i * 0.3) * speed,
+      height: 15 + i * 10,
+      opacity: 0.4 - i * 0.1
+    }));
+  }, [speed]);
+
+  return (
+    <div className="fixed inset-0 overflow-hidden -z-10">
+      {waveProps.map((wave, i) => (
+        <WaveComponent 
+          key={i}
+          theme={theme}
+          blurAmount={blurAmount}
+          {...wave}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, theme, blurAmount }) {
+  const animationControls = useAnimation();
+  
+  useEffect(() => {
+    const animate = async () => {
+      await animationControls.start({
+        x: [0, -100],
+        transition: { 
+          duration: 10 / speed,
+          ease: "linear",
+          repeat: Infinity
+        }
+      });
+    };
+    animate();
+  }, [animationControls, speed]);
+
+  const wavePoints = useMemo(() => {
+    const points = [];
+    for (let x = 0; x <= 100; x += 0.5) {
+      const y = amplitude * Math.sin(frequency * x + phase);
+      points.push(`${x}% ${50 + y}%`);
+    }
+    return points.join(', ');
+  }, [amplitude, frequency, phase]);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <motion.div
+        className={`absolute w-[200%] h-full bg-gradient-to-r ${theme} blur-[${blurAmount}px]`}
+        style={{ clipPath: `polygon(${wavePoints})` }}
+        animate={animationControls}
+      >
+        <div 
+          className="absolute bottom-0 w-full"
+          style={{ height: `${height}%`, opacity }}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
+const MemoizedOrbsContainer = React.memo(OrbsContainer);
+const MemoizedParticlesContainer = React.memo(ParticlesContainer);
+const MemoizedWavesContainer = React.memo(WavesContainer);
+
 // Background animation styles
 const backgroundAnimations = [
   { id: 'orbs', name: 'Floating Orbs', component: MemoizedOrbsContainer },
@@ -45,148 +210,6 @@ function useSlideOrbs(slideIndex, orbCount = 8, orbSpeed = 1, themeOverride = nu
     }
     return newOrbs;
   }, [slideIndex, orbCount, orbSpeed, themeOverride]);
-}
-
-function OrbsContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 90 }) {
-  const orbs = useSlideOrbs(slideIndex, 8, orbSpeed, themeOverride);
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={slideIndex}
-        className="absolute inset-0 pointer-events-none"
-        style={{ perspective: '1200px' }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.1, ease: 'easeInOut' }}
-      >
-        {orbs.map((orb, i) => (
-          <motion.div
-            key={i}
-            className={`absolute rounded-full bg-gradient-to-r ${orb.theme} opacity-40`}
-            style={{
-              transformStyle: 'preserve-3d',
-              width: orb.width,
-              height: orb.height,
-              filter: `blur(${blurAmount}px)`
-            }}
-            initial={{
-              x: `${orb.x}%`,
-              y: `${orb.y}%`,
-              z: orb.z,
-              rotateY: 0,
-              rotateX: 0,
-              scale: 2.8
-            }}
-            animate={{
-              rotateY: [0, 360],
-              rotateX: [0, 180, 360],
-              scale: [0.8, 3.2, 0.8]
-            }}
-            transition={{
-              duration: orb.duration,
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-          />
-        ))}
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-// Particles background animation
-function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
-  const theme = themeOverride || 
-    orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
-  
-  const particles = useMemo(() => {
-    // Limit max particles to prevent performance issues
-    const maxParticles = Math.min(60, 30 + Math.floor(orbSpeed * 15));
-    return Array.from({ length: maxParticles }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: 3 + Math.random() * 8,
-      duration: (3 + Math.random() * 7) / (orbSpeed * 1.5) // More significant speed effect
-    }));
-  }, [slideIndex, orbSpeed]);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map(particle => (
-        <motion.div
-          key={particle.id}
-          style={{
-            position: 'absolute',
-            borderRadius: '9999px',
-            backgroundColor: `var(--${theme})`,
-            width: particle.size,
-            height: particle.size,
-            x: `${particle.x}%`,
-            y: `${particle.y}%`,
-            opacity: 0.7,
-            filter: blurAmount > 0 ? `blur(${blurAmount/3}px)` : 'none'
-          }}
-          animate={{
-            x: [`${particle.x}%`, `${(particle.x + 20) % 100}%`, `${(particle.x - 20 + 100) % 100}%`, `${particle.x}%`],
-            y: [`${particle.y}%`, `${(particle.y - 30 + 100) % 100}%`, `${(particle.y + 30) % 100}%`, `${particle.y}%`],
-            opacity: [0.3, 0.7, 0.3]
-          }}
-          transition={{
-            duration: particle.duration,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// Wave effect background
-function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
-  const theme = themeOverride || 
-    orbColorThemes[slideIndex % orbColorThemes.length].split(' ')[1].replace('to-', '');
-  
-  const waveCount = Math.min(5, Math.max(2, Math.floor(orbSpeed * 3))); // Dynamic wave count based on speed
-  
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: waveCount }).map((_, i) => {
-        const delay = i * (0.4 / orbSpeed); // Shorter delay at higher speeds
-        const duration = (5 - i * 0.5) / (orbSpeed * 1.5); // More significant speed effect
-        
-        return (
-          <motion.div
-            key={i}
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: `var(--${theme})`,
-              height: `${25 + (orbSpeed * 5)}%`,
-              opacity: 0.2,
-              filter: blurAmount > 0 ? `blur(${blurAmount/2}px)` : 'none'
-            }}
-            initial={{ y: '100%' }}
-            animate={{
-              y: ['100%', '-10%', '100%'],
-              scaleX: [1, 1.1, 1],
-              scaleY: [1, 1.2, 1],
-            }}
-            transition={{
-              duration,
-              delay,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        );
-      })}
-    </div>
-  );
 }
 
 // -----------------------------------------------------
@@ -576,11 +599,6 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     </div>
   );
 }
-
-// Memoize the animation components for better performance
-const MemoizedOrbsContainer = React.memo(OrbsContainer);
-const MemoizedParticlesContainer = React.memo(ParticlesContainer);
-const MemoizedWavesContainer = React.memo(WavesContainer);
 
 // -----------------------------------------------------
 // Main VerticalSlideshow Component
