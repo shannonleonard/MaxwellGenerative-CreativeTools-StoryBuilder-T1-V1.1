@@ -1,3 +1,16 @@
+## [1.2.0] - 2025-03-12
+
+### Added
+- Enhanced color picker with gradient text support
+- Per-slide styling options
+- Font weight customization
+- Live preview of text styling
+- Apply style to all slides feature
+
+### Changed
+- Removed version number display from UI
+- Improved slide data structure to store styling information
+
 ## [1.1.2] - 2025-03-12
 
 ### Enhanced
