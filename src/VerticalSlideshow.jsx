@@ -118,87 +118,6 @@ function ParticlesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAm
   );
 }
 
-function WavesContainer({ slideIndex, orbSpeed, themeOverride = null, blurAmount = 0 }) {
-  const theme = themeOverride || orbColorThemes[slideIndex % orbColorThemes.length];
-  // Make speed directly proportional to orbSpeed for more intuitive control
-  const speed = Math.max(0.2, orbSpeed * 2); 
-  // Always apply a strong blur to waves - minimum 30px
-  const effectiveBlur = Math.max(30, blurAmount);
-  
-  const waveProps = useMemo(() => {
-    return Array(4).fill().map((_, i) => ({
-      amplitude: 20 + i * 10,
-      frequency: 0.5 + i * 0.2,
-      phase: i * Math.PI / 2,
-      // Direct connection between speed slider and wave speed
-      speed: (0.5 + i * 0.3) * speed,
-      height: 15 + i * 10,
-      opacity: 0.7 - i * 0.1,  // Increased opacity for better visibility
-      blur: effectiveBlur
-    }));
-  }, [speed, effectiveBlur]);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
-      {waveProps.map((wave, i) => (
-        <WaveComponent 
-          key={i}
-          theme={theme}
-          blurAmount={wave.blur}
-          {...wave}
-        />
-      ))}
-    </div>
-  );
-}
-
-function WaveComponent({ amplitude, frequency, phase, speed, height, opacity, theme, blurAmount }) {
-  const animationControls = useAnimation();
-  
-  useEffect(() => {
-    const animate = async () => {
-      await animationControls.start({
-        x: [0, -100],
-        transition: { 
-          duration: 10 / speed,
-          ease: "easeInOut",
-          repeat: Infinity
-        }
-      });
-    };
-    animate();
-  }, [animationControls, speed]);
-
-  const wavePoints = useMemo(() => {
-    const points = [];
-    for (let x = 0; x <= 100; x += 0.5) {
-      const y = amplitude * Math.sin(frequency * x + phase);
-      points.push(`${x}% ${50 + y}%`);
-    }
-    return points.join(', ');
-  }, [amplitude, frequency, phase]);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 5 }}>
-      <motion.div
-        className={`absolute w-[200%] h-full bg-gradient-to-r ${theme}`}
-        style={{ 
-          clipPath: `polygon(${wavePoints})`, 
-          // Ensure blur is always applied and prominent
-          filter: `blur(${blurAmount}px) hue-rotate(var(--hue-shift))`,
-          zIndex: 5
-        }}
-        animate={animationControls}
-      >
-        <div 
-          className="absolute bottom-0 w-full"
-          style={{ height: `${height}%`, opacity }}
-        />
-      </motion.div>
-    </div>
-  );
-}
-
 const MemoizedOrbsContainer = React.memo(OrbsContainer, (prevProps, nextProps) => {
   return prevProps.slideIndex === nextProps.slideIndex && 
          prevProps.orbSpeed === nextProps.orbSpeed && 
@@ -213,18 +132,10 @@ const MemoizedParticlesContainer = React.memo(ParticlesContainer, (prevProps, ne
          prevProps.blurAmount === nextProps.blurAmount;
 });
 
-const MemoizedWavesContainer = React.memo(WavesContainer, (prevProps, nextProps) => {
-  return prevProps.slideIndex === nextProps.slideIndex && 
-         prevProps.orbSpeed === nextProps.orbSpeed && 
-         prevProps.themeOverride === nextProps.themeOverride && 
-         prevProps.blurAmount === nextProps.blurAmount;
-});
-
-// Background animation styles
+// Background animation styles - remove waves option
 const backgroundAnimations = [
   { id: 'orbs', name: 'Floating Orbs', component: MemoizedOrbsContainer },
   { id: 'particles', name: 'Particles', component: MemoizedParticlesContainer },
-  { id: 'waves', name: 'Wave Effect', component: MemoizedWavesContainer },
   { id: 'none', name: 'None (Static)', component: null }
 ];
 
@@ -769,139 +680,46 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       value: "#0A2472", // Darker blue for better contrast with white
       orbTheme: "from-blue-600 to-indigo-800",
       particleColor: "blue-700",
-      waveColor: "blue-800",
-      slideColors: ["#0A2472", "#123388", "#1E40AF", "#1D4ED8", "#2563EB", "#3B82F6"]
+      slideColors: ["#0A2472", "#123388", "#1E40AF", "#1D4ED8", "#2563EB"]
     },
     { 
       name: "Royal Purple", 
       value: "#3C096C", // Deep purple for high contrast
       orbTheme: "from-purple-600 to-violet-900",
       particleColor: "purple-700",
-      waveColor: "purple-800",
-      slideColors: ["#3C096C", "#4C1D95", "#5B21B6", "#6D28D9", "#7E22CE", "#8B5CF6"]
+      slideColors: ["#3C096C", "#4C1D95", "#5B21B6", "#6D28D9", "#7E22CE"]
     },
     { 
       name: "Forest Green", 
       value: "#184E1C", // Dark green for readability
       orbTheme: "from-green-700 to-teal-900",
       particleColor: "green-800",
-      waveColor: "green-900",
-      slideColors: ["#184E1C", "#166534", "#15803D", "#16A34A", "#22C55E", "#4ADE80"]
+      slideColors: ["#184E1C", "#166534", "#15803D", "#16A34A", "#22C55E"]
     },
     { 
       name: "Deep Crimson", 
       value: "#630A10", // Dark red for contrast
       orbTheme: "from-red-700 to-rose-900",
       particleColor: "red-800",
-      waveColor: "red-900",
-      slideColors: ["#630A10", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626", "#EF4444"]
+      slideColors: ["#630A10", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626"]
     },
     { 
       name: "Amber Gold", 
       value: "#7A4100", // Dark amber/brown for contrast with white
       orbTheme: "from-yellow-600 to-amber-900",
       particleColor: "amber-700",
-      waveColor: "amber-800",
-      slideColors: ["#7A4100", "#92400E", "#A16207", "#B45309", "#D97706", "#F59E0B"]
+      slideColors: ["#7A4100", "#92400E", "#A16207", "#B45309", "#D97706"]
     }
   ], []);
 
-  // Enhanced function to generate more varied complementary colors for slides
+  // Replace the complex color generation with a simpler, more stable approach
   const generateRandomSlideColor = useCallback((themeIndex, slideIndex) => {
     const theme = backgroundThemes[themeIndex];
-    const baseColors = theme.slideColors;
+    const colors = theme.slideColors;
     
-    // Generate a color that's more distinctly different but still complementary
-    const baseColor = baseColors[slideIndex % baseColors.length];
-    
-    // Convert hex to RGB
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-    
-    // Create more significant variation while maintaining darkness and theme relationship
-    // Increase hue shift range for more distinctive colors
-    const hueShift = Math.floor(Math.random() * (80) - 40); // -40 to +40 degrees
-    const satShift = Math.random() * 0.3 - 0.15; // -15% to +15%
-    
-    // Convert to HSL to manipulate
-    let [h, s, l] = rgbToHsl(r, g, b);
-    
-    // Apply larger hue shift for more variety
-    h = (h + hueShift + 360) % 360;
-    
-    // More dramatic saturation adjustment for variety
-    s = Math.max(0.3, Math.min(0.9, s + satShift));
-    
-    // Keep lightness low for good contrast with white text, but vary slightly
-    l = Math.max(0.12, Math.min(0.38, l + (Math.random() * 0.16 - 0.08)));
-    
-    // Convert back to RGB then hex
-    const newColor = hslToHex(h, s, l);
-    return newColor;
+    // Simply use the color from the array based on slideIndex
+    return colors[slideIndex % colors.length];
   }, [backgroundThemes]);
-  
-  // Function to convert RGB to HSL
-  const rgbToHsl = (r, g, b) => {
-    r /= 255;
-    g /= 255;
-    b /= 255;
-    
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-    
-    if (max === min) {
-      h = s = 0; // achromatic
-    } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-        default: break;
-      }
-      
-      h /= 6;
-    }
-    
-    return [h * 360, s, l];
-  };
-  
-  // Function to convert HSL to Hex
-  const hslToHex = (h, s, l) => {
-    h /= 360;
-    let r, g, b;
-    
-    if (s === 0) {
-      r = g = b = l; // achromatic
-    } else {
-      const hue2rgb = (p, q, t) => {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1/6) return p + (q - p) * 6 * t;
-        if (t < 1/2) return q;
-        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-        return p;
-      };
-      
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      
-      r = hue2rgb(p, q, h + 1/3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1/3);
-    }
-    
-    const toHex = x => {
-      const hex = Math.round(x * 255).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-    
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
   
   // Function to apply global text color to all slides
   const applyGlobalTextColor = (color) => {
@@ -1467,14 +1285,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
             )}
             {backgroundAnimationType === 'particles' && (
               <MemoizedParticlesContainer 
-                slideIndex={currentSlide} 
-                orbSpeed={orbSpeed} 
-                themeOverride={selectedTheme.orbTheme} 
-                blurAmount={blurAmount}
-              />
-            )}
-            {backgroundAnimationType === 'waves' && (
-              <MemoizedWavesContainer 
                 slideIndex={currentSlide} 
                 orbSpeed={orbSpeed} 
                 themeOverride={selectedTheme.orbTheme} 
