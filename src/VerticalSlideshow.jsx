@@ -321,7 +321,7 @@ function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
     if (selectedSlideIndex >= slideLines.length && slideLines.length > 0) {
       setSelectedSlideIndex(slideLines.length - 1);
     }
-  }, [editedSlides, slideStyles.length, selectedSlideIndex]);
+  }, [editedSlides, slideStyles.length, selectedSlideIndex, slideStyles]);
 
   const handleSave = () => {
     // Split the text by newlines and filter out empty lines
@@ -776,7 +776,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
         }))
       );
     }
-  }, [selectedThemeIndex, globalHueShift, getSlideColor]);
+  }, [selectedThemeIndex, globalHueShift, getSlideColor, slidesData.length]);
 
   // CSS Variables for theme colors
   useEffect(() => {
@@ -965,8 +965,6 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
       setRemovingImage(false);
     }, 600);
   };
-
-  const progressWidth = `${((currentSlide + 1) / totalSlides) * 100}%`;
 
   // When a GIF is selected from the fixed picker, add it to the main frame.
   const handleGifSelect = (gifUrl) => {
