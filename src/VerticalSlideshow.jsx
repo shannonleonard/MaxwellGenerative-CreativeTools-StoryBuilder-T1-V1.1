@@ -354,6 +354,7 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
   
   // Global color theme control - hue shift value (0-360)
   const [globalHueShift, setGlobalHueShift] = useState(0);
+  const [autoShiftColor, setAutoShiftColor] = useState(true); // Add auto-shift feature
   
   // Additional customization: Background theme and orb speed.
   const backgroundThemes = useMemo(() => [
@@ -452,9 +453,16 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     if (backgroundThemes[selectedThemeIndex] && backgroundThemes[selectedThemeIndex].slideColors) {
       const colors = backgroundThemes[selectedThemeIndex].slideColors;
       const color = colors[currentSlide % colors.length];
+      
+      // Automatically shift hue based on the current slide if autoShiftColor is enabled
+      if (autoShiftColor) {
+        const newHueShift = (currentSlide * 60) % 360; // Shift by 60 degrees for each slide
+        setGlobalHueShift(newHueShift);
+      }
+      
       setSlideBackgroundColor(shiftHue(color, globalHueShift));
     }
-  }, [currentSlide, selectedThemeIndex, globalHueShift, backgroundThemes]);
+  }, [currentSlide, selectedThemeIndex, globalHueShift, backgroundThemes, autoShiftColor]);
 
   // Cleanup animation resources on unmount and when changing slides
   // Single cleanupAnimations effect to prevent animation leaks
@@ -581,58 +589,80 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
     document.documentElement.style.setProperty('--hue-shift', `${globalHueShift}deg`);
   }, [globalHueShift]);
 
-  // Allow text movement with WASD keys
+  // Fix the WASD movement issue with a more robust implementation
   useEffect(() => {
-    // Increase movement speed for more noticeable movement
-    const movementSpeed = 2.5; // Increased from 0.5
+    // Use a higher movement speed for better responsiveness
+    const movementSpeed = 3.0;
     
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      if (["w", "a", "s", "d"].includes(key)) {
-        keysPressed.current[key] = true;
-        // Prevent default behavior (like scrolling) for these keys
-        e.preventDefault();
+    // Create better key handlers that won't interfere with other components
+    function handleKeyDown(e) {
+      // Only handle WASD keys if no modal is open
+      if (!isEditModalOpen && !isBackupManagerOpen) {
+        const key = e.key.toLowerCase();
+        if (["w", "a", "s", "d"].includes(key)) {
+          keysPressed.current[key] = true;
+          // Prevent scrolling
+          e.preventDefault();
+        }
       }
-    };
+    }
 
-    const handleKeyUp = (e) => {
+    function handleKeyUp(e) {
       const key = e.key.toLowerCase();
       if (["w", "a", "s", "d"].includes(key)) {
         keysPressed.current[key] = false;
       }
-    };
-
-    function animate(time) {
-      if (!lastTimeRef.current) lastTimeRef.current = time;
-      const delta = Math.min(time - lastTimeRef.current, 100); // Cap delta to prevent jumps
-      lastTimeRef.current = time;
-      const movement = movementSpeed * delta;
-
-      if (keysPressed.current.w) baseY.set(baseY.get() - movement);
-      if (keysPressed.current.s) baseY.set(baseY.get() + movement);
-      if (keysPressed.current.a) baseX.set(baseX.get() - movement);
-      if (keysPressed.current.d) baseX.set(baseX.get() + movement);
-
-      rafId.current = requestAnimationFrame(animate);
     }
 
-    // Add passive: false to ensure preventDefault works correctly
-    window.addEventListener('keydown', handleKeyDown, { passive: false });
-    window.addEventListener('keyup', handleKeyUp);
+    // More robust animation function with error handling
+    function animate(time) {
+      try {
+        if (!lastTimeRef.current) lastTimeRef.current = time;
+        const delta = Math.min(time - lastTimeRef.current, 100); // Cap delta to prevent jumps
+        lastTimeRef.current = time;
+        const movement = movementSpeed * delta;
+
+        if (keysPressed.current.w) baseY.set(baseY.get() - movement);
+        if (keysPressed.current.s) baseY.set(baseY.get() + movement);
+        if (keysPressed.current.a) baseX.set(baseX.get() - movement);
+        if (keysPressed.current.d) baseX.set(baseX.get() + movement);
+
+        // Only continue animation if component is still mounted
+        if (rafId.current) {
+          rafId.current = requestAnimationFrame(animate);
+        }
+      } catch (err) {
+        console.error("Animation error:", err);
+        // Try to recover
+        if (rafId.current) {
+          cancelAnimationFrame(rafId.current);
+          rafId.current = requestAnimationFrame(animate);
+        }
+      }
+    }
+
+    // Add options to prevent event bubbling and capture phase to ensure these get priority
+    document.addEventListener('keydown', handleKeyDown, { passive: false, capture: true });
+    document.addEventListener('keyup', handleKeyUp, { capture: true });
+    
+    // Start animation
     rafId.current = requestAnimationFrame(animate);
 
+    // Cleanup function
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keydown', handleKeyDown, { capture: true });
+      document.removeEventListener('keyup', handleKeyUp, { capture: true });
+      
       if (rafId.current) {
         cancelAnimationFrame(rafId.current);
         rafId.current = null;
       }
+      
       lastTimeRef.current = null;
-      // Reset all keys when unmounting
+      // Reset all keys to prevent stuck keys
       keysPressed.current = { w: false, a: false, s: false, d: false };
     };
-  }, [baseX, baseY]);
+  }, [baseX, baseY, isEditModalOpen, isBackupManagerOpen]); // Add modal states as dependencies
 
   // Add back the backslash key reset effect
   useEffect(() => {
@@ -712,10 +742,24 @@ const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
               max="360"
               step="5"
               value={globalHueShift}
-              onChange={(e) => setGlobalHueShift(Number(e.target.value))}
+              onChange={(e) => {
+                setGlobalHueShift(Number(e.target.value));
+                // Disable auto shift when manually changing
+                setAutoShiftColor(false);
+              }}
               className="cursor-pointer"
+              disabled={autoShiftColor}
             />
             <span className="text-white ml-1">{globalHueShift}°</span>
+          </div>
+          <div className="flex items-center">
+            <label className="text-white font-bold mr-2">Auto Color Shift:</label>
+            <input
+              type="checkbox"
+              checked={autoShiftColor}
+              onChange={(e) => setAutoShiftColor(e.target.checked)}
+              className="w-4 h-4"
+            />
           </div>
           <div>
             <label className="text-white font-bold mr-2">Background Animation:</label>
