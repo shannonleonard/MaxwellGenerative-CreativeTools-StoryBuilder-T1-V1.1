@@ -126,6 +126,114 @@ function GifPanelFixed({ pickerCollection, onSelectGif }) {
 }
 
 // -----------------------------------------------------
+// Edit Slides Modal Component
+// -----------------------------------------------------
+function EditSlidesModal({ isOpen, onClose, slides, onSave }) {
+  const [editedSlides, setEditedSlides] = useState(slides.join('\n'));
+  const [textColor, setTextColor] = useState('#FFFFFF');
+  const textareaRef = useRef(null);
+
+  // Focus the textarea when the modal opens
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const handleSave = () => {
+    // Split the text by newlines and filter out empty lines
+    const newSlides = editedSlides
+      .split('\n')
+      .map(slide => slide.trim())
+      .filter(slide => slide.length > 0);
+    
+    onSave(newSlides, textColor);
+    onClose();
+  };
+
+  // Prevent keyboard shortcuts from triggering while modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleKeyDown = (e) => {
+      // Don't prevent default for copy/paste shortcuts
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+        return;
+      }
+      
+      // Prevent Escape from bubbling (we handle it ourselves)
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      
+      // Allow normal typing in the textarea
+      if (e.target === textareaRef.current) {
+        return;
+      }
+      
+      // Prevent all other keyboard events from bubbling up
+      e.stopPropagation();
+    };
+    
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <h2 className="text-white text-2xl font-bold mb-4">Edit Slides</h2>
+        
+        <div className="mb-4">
+          <label className="text-white block mb-2">Text Color:</label>
+          <div className="flex items-center gap-3">
+            <input 
+              type="color" 
+              value={textColor} 
+              onChange={(e) => setTextColor(e.target.value)} 
+              className="w-10 h-10 rounded cursor-pointer"
+            />
+            <span className="text-white">{textColor}</span>
+          </div>
+        </div>
+        
+        <div className="mb-4 flex-1 overflow-hidden">
+          <label className="text-white block mb-2">
+            Enter each slide on a new line:
+          </label>
+          <textarea
+            ref={textareaRef}
+            value={editedSlides}
+            onChange={(e) => setEditedSlides(e.target.value)}
+            className="w-full h-[300px] p-3 bg-gray-700 text-white rounded resize-none"
+            style={{ overflowY: 'auto' }}
+          />
+        </div>
+        
+        <div className="flex justify-end gap-3">
+          <button 
+            onClick={onClose} 
+            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={handleSave} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------
 // Main VerticalSlideshow Component
 // -----------------------------------------------------
 const VerticalSlideshow = ({ currentSlide, setCurrentSlide }) => {
